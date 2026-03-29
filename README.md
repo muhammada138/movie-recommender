@@ -4,6 +4,7 @@ Collaborative filtering on the MovieLens dataset. No LLMs, no APIs — just pand
 
 Live demo: [Streamlit Cloud](https://share.streamlit.io) _(deploy link goes here after Streamlit Cloud setup)_
 
+![App Screenshot](assets/screenshot.png)
 ## How it works
 
 The model builds a user×movie rating matrix (610 users × 9,724 movies) and computes cosine similarity between every pair of users. When you ask for recommendations for a given user, it:
@@ -21,10 +22,11 @@ Evaluated on an 80/20 train/test split. The model sees only training ratings whe
 
 | Method | RMSE |
 |---|---|
-| Model (collaborative filtering) | **0.9764** |
-| Baseline (always predict mean) | 1.0488 |
+| Latent Factor SVD (Mean-Centered) | **0.9304** |
+| User-Based Collaborative Filtering | 0.9764 |
+| Baseline (predict global mean) | 1.0488 |
 
-The model beats the mean-prediction baseline by ~7%.
+The collaborative filtering model beats the baseline by ~7%, while the SVD matrix factorization approach further improves this, demonstrating exactly why SVD became the industry standard for sparse recommendation matrices.
 
 ## Known limitations
 
