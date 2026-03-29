@@ -18,6 +18,10 @@ def build_user_item_matrix(ratings):
     return matrix
 
 
+def get_user_rating_count(user_id, ratings):
+    return len(ratings[ratings["userId"] == user_id])
+
+
 def build_similarity_matrix(matrix):
     sim = cosine_similarity(matrix)
     return pd.DataFrame(sim, index=matrix.index, columns=matrix.index)
@@ -49,6 +53,37 @@ def get_recommendations(user_id, matrix, similarity_df, n=10, top_k_users=5):
 ratings, movies = load_data()
 matrix = build_user_item_matrix(ratings)
 similarity_df = build_similarity_matrix(matrix)
+
+# build content-based similarity matrix globally
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+
+movies['genres_str'] = movies['genres'].str.replace('|', ' ')
+tfidf = TfidfVectorizer(stop_words='english')
+tfidf_matrix = tfidf.fit_transform(movies['genres_str'])
+genre_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
+
+
+def recommend_similar_movies(movie_id, n=10):
+    if movie_id not in movies["movieId"].values:
+        raise ValueError(f"Movie {movie_id} not found")
+        
+    idx = movies.index[movies["movieId"] == movie_id][0]
+    sim_scores = list(enumerate(genre_sim[idx]))
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    
+    # Skip the movie itself
+    sim_scores = sim_scores[1:n+1]
+    
+    result = []
+    for i, score in sim_scores:
+        result.append({
+            "movieId": movies.iloc[i]["movieId"],
+            "title": movies.iloc[i]["title"],
+            "genres": movies.iloc[i]["genres"],
+            "score": round(float(score), 3),
+        })
+    return result
 
 
 def recommend_for_user(user_id, n=10, top_k_users=5):
