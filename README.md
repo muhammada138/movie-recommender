@@ -1,101 +1,87 @@
-# Movie Recommender
+# Marquee 🎞️✨
 
-A recommendation system built completely from scratch. No APIs, no black boxes—just math, pandas, and scikit-learn proving how Netflix and Spotify powered their core models before deep learning.
+**The intelligent movie recommendation engine.**
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=streamlit&logoColor=white)
-![Scikit-Learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat&logo=scikit-learn&logoColor=white)
-![Pandas](https://img.shields.io/badge/pandas-150458?style=flat&logo=pandas&logoColor=white)
+Marquee is a modern, full-stack movie discovery platform that combines fundamental machine learning with rich external metadata. Built completely with Python, it transforms the raw MovieLens dataset into a visual, context-aware discovery experience.
 
-Live demo: [Streamlit App](https://cf-movie-recommender.streamlit.app/) _(update this with your final app URL)_
+Live Demo: [Marquee on Streamlit](https://cf-movie-recommender.streamlit.app/)
 
-![App Screenshot](assets/screenshot.png)
+![Marquee Demo](assets/marquee_demo.png)
+_Note: To add your own screenshot, save a capture as assets/marquee_demo.png and push to Git._
 
 ---
 
-## What it does
+## What makes Marquee different?
 
-Most tutorial ML projects call an external API. This project implements actual collaborative and content-based filtering algorithms from the ground up on a highly sparse matrix of 100,000+ real ratings. 
+Most recommendation tutorials rely on high-level APIs or "black box" models. Marquee implements actual collaborative and content-based algorithms from the ground up, then layers on modern web features to create a polished portfolio project.
 
-**Key features:**
+### 🧠 Dual-Engine Intelligence
+- **User-Based Collaborative Filtering**: Computes a massive 610x610 user similarity matrix to predict what you'll love based on the tastes of similar film buffs.
+- **Hybrid Content-Based Discovery**: A sophisticated blending engine that uses TF-IDF vectors from both movie genres and over 9,000+ TMDB keywords (like "street racing" or "superhero") to find deep semantic matches.
+- **Gaussian Temporal Decay**: Automatically prioritizes movies from similar release eras, ensuring that if you're looking for modern blockbusters, the engine won't just dump 1940s classics on you.
 
-- **User-Based Collaborative Filtering** - Computes a 610x610 user similarity matrix to recommend movies based on the tastes of your nearest neighbors
-- **Content-Based Similarity** - Generates TF-IDF vectors from movie genres to recommend semantically similar films, regardless of user ratings
-- **Matrix Factorization** - Evaluates a Truncated SVD model on the rating matrix to handle sparsity, achieving a much lower RMSE than pure distance metrics
-- **Cold-Start Handling** - Explicit minimum ratings filters and global mean fallbacks gracefully handle new users or unrated items
-- **Interactive UI** - Streamlit dashboard with dedicated tabs to test both the collaborative and content-based models live
-- **Proper ML Evaluation** - Strict 80/20 train/test split. Matrix similarities are rebuilt exclusively on training data to explicitly prevent data leakage
+### 🎨 Premium Visual Experience
+- **Visual Search**: Real-time fuzzy search that renders high-quality movie posters as you type.
+- **Combination Pool**: Add multiple movies to a "shopping cart" to find a single perfect recommendation that satisfies the intersection of all your inputs.
+- **Deep Integrations**: Direct IMDb deep-links and real-time US streaming availability badges (HBO, Netflix, etc.) for every single recommendation.
+- **Modern UI**: A sleek, glassmorphic dark-theme interface built with Custom CSS and the Outfit typography system.
 
 ---
 
-## Tech stack
+## Tech Stack
 
-| Layer | Tech |
+| Layer | Technology |
 |---|---|
-| Frontend / UI | Streamlit |
-| Data Processing | Pandas, NumPy |
-| Machine Learning | Scikit-Learn (Cosine Similarity, Linear Kernel, TruncatedSVD) |
-| Dataset | MovieLens Latest Small |
+| **Frontend / UI** | Streamlit, Custom CSS (Glassmorphism) |
+| **Logic / ML** | Python, Scikit-Learn, Pandas, NumPy |
+| **Data Enrichment** | TMDB API (Keywords, Posters, Streaming Providers) |
+| **Dataset** | MovieLens Latest Small (100k+ ratings) |
 
 ---
 
-## Getting started
-
-You don't need any API keys. The dataset is inherently included in the `/data` directory.
+## Getting Started
 
 ### Running Locally
 
-```bash
-git clone https://github.com/muhammada138/movie-recommender.git
-cd movie-recommender
-pip install -r requirements.txt
-streamlit run app.py
-```
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/muhammada138/movie-recommender.git
+   cd movie-recommender
+   ```
 
-### Running Evaluation / EDA
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-To compute the RMSE of the collaborative filtering vs SVD:
+3. **Launch the app**:
+   ```bash
+   streamlit run app.py
+   ```
+
+### Running Evaluation
+
+To see the math behind the curtain and calculate the RMSE (Root Mean Square Error) of our custom models:
 ```bash
 python evaluate.py
 ```
 
-To view the Exploratory Data Analysis:
-```bash
-# Note: jupyter, matplotlib, and seaborn are required for the notebook
-jupyter notebook notebooks/eda.ipynb
-```
-
 ---
 
-## How the algorithm works
+## Model Performance
 
-The core `recommend_for_user` function relies entirely on mathematical similarity:
+Evaluated against a strict 80/20 train/test split.
 
-1. Loads the 610 user × 9,724 movie sparse rating matrix (~98% empty)
-2. Computes the cosine similarity between every pair of users
-3. Finds the *K* most similar users to the target user
-4. Takes their ratings for movies the target user hasn't seen yet
-5. Computes a weighted average—giving inherently higher mathematical weight to users with a higher similarity score
-6. Returns the top *N* movies sorted by predicted weighted score
-
----
-
-## Model performance
-
-Evaluated against the held-out test data.
-
-| Method | RMSE |
+| Method | RMSE (Lower is Better) |
 |---|---|
-| Latent Factor SVD (Mean-Centered) | **0.9304** |
+| **Latent Factor SVD** | **0.9304** |
 | User-Based Collaborative Filtering | 0.9764 |
-| Baseline (Predict global mean) | 1.0488 |
-
-The basic collaborative model cleanly beats predicting the global mean by ~7%. However, the SVD matrix factorization outright outperforms it by uncovering latent features—demonstrating exactly why Matrix Factorization became the industry standard for sparse recommendation problems (like the Netflix Prize).
+| Global Mean Baseline | 1.0488 |
 
 ---
 
-## Dataset & citations
+## Dataset & Citations
 
-[MovieLens Latest Small](https://grouplens.org/datasets/movielens/latest/) — 100,836 ratings from 610 users on 9,742 movies. Ratings are on a 0.5–5.0 scale.
+The project uses the [MovieLens Latest Small](https://grouplens.org/datasets/movielens/latest/) dataset which includes 100,836 ratings from 610 users on 9,742 movies.
 
-> F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. ACM Transactions on Interactive Intelligent Systems (TiiS) 5, 4: 22:1–22:19.
+> F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. ACM Transactions on Interactive Intelligent Systems (TiiS) 5, 4: 22:1-22:19.
