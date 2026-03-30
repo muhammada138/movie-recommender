@@ -10,3 +10,8 @@ venv/
 dist/
 build/
 .pytest_cache/
+
+# planning / artifact files
+implementation_plan.md
+task.md
+walkthrough.md
