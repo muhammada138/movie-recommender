@@ -13,10 +13,22 @@ def format_title(title):
         return f"{article} {base}{rest}".strip()
     return title
 
-def load_data(ratings_path="data/ratings.csv", movies_path="data/movies.csv", links_path="data/links.csv"):
+def load_data(ratings_path="data/ratings.csv", movies_path="data/movies.csv", links_path="data/links.csv", tags_path="data/tags.csv"):
     ratings = pd.read_csv(ratings_path)
     movies = pd.read_csv(movies_path)
     links = pd.read_csv(links_path)
+    
+    try:
+        tags = pd.read_csv(tags_path)
+        tags['tag'] = tags['tag'].fillna('').astype(str)
+        # Lowercase tags for consistency
+        tags['tag'] = tags['tag'].str.lower()
+        grouped_tags = tags.groupby('movieId')['tag'].apply(lambda x: ' '.join(x)).reset_index()
+        movies = movies.merge(grouped_tags, on='movieId', how='left')
+        movies['tag'] = movies['tag'].fillna('')
+    except Exception:
+        movies['tag'] = ''
+
     # IMDb ids might come as ints without leading zeros. TMDB formats them with 'tt' manually or we just pass the raw value.
     if 'imdbId' in links.columns:
         links['imdbId'] = links['imdbId'].apply(lambda x: str(x).zfill(7) if pd.notna(x) else x)
@@ -74,9 +86,11 @@ similarity_df = build_similarity_matrix(matrix)
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
-movies['genres_str'] = movies['genres'].str.replace('|', ' ')
+movies['genres_str'] = movies['genres'].str.replace('|', ' ').str.lower()
+movies['metadata'] = movies['genres_str'] + " " + movies.get('tag', '')
+
 tfidf = TfidfVectorizer(stop_words='english')
-tfidf_matrix = tfidf.fit_transform(movies['genres_str'])
+tfidf_matrix = tfidf.fit_transform(movies['metadata'])
 genre_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
 
 
