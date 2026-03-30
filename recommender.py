@@ -97,13 +97,6 @@ gen_mat = gen_tfidf.fit_transform(movies['genres_str'])
 tag_tfidf = TfidfVectorizer(stop_words='english')
 tag_mat = tag_tfidf.fit_transform(movies['tag'])
 
-g_sim = linear_kernel(gen_mat, gen_mat)
-t_sim = linear_kernel(tag_mat, tag_mat)
-
-# 65% baseline genre structural match, 35% user contextual tag match
-genre_sim = (g_sim * 0.65) + (t_sim * 0.35)
-
-
 def recommend_similar_movies(movie_ids, n=10):
     if not isinstance(movie_ids, list):
         movie_ids = [movie_ids]
@@ -114,8 +107,17 @@ def recommend_similar_movies(movie_ids, n=10):
         
     indices = movies.index[movies["movieId"].isin(valid_ids)].tolist()
     
-    # Calculate average genre similarity vector for the selected movies
-    avg_sim = genre_sim[indices].mean(axis=0)
+    # Compute similarity ON-THE-FLY to prevent huge memory overhead (~2GB dense matrices)
+    # Calculate average vectors for the selected movies
+    target_g_vec = gen_mat[indices].mean(axis=0)
+    target_t_vec = tag_mat[indices].mean(axis=0)
+    
+    # Calculate similarity scores against all movies
+    g_scores = linear_kernel(target_g_vec, gen_mat).flatten()
+    t_scores = linear_kernel(target_t_vec, tag_mat).flatten()
+    
+    # Blend genre (65%) and tag (35%) similarities
+    avg_sim = (g_scores * 0.65) + (t_scores * 0.35)
     
     # Calculate the average year of the targeted movies
     target_year = movies.iloc[indices]["year"].mean()
