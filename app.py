@@ -44,26 +44,52 @@ section[data-testid="stSidebar"] { display: none !important; }
     padding: 2rem 3rem !important;
 }
 
-/* ── NAV BUTTONS (first stHorizontalBlock only) ── */
-.stHorizontalBlock:first-of-type .stButton > button {
+/* ── NAV BUTTONS (tagged via JS with data-marquee-nav) ── */
+[data-marquee-nav="1"] .stButton > button {
     background: transparent !important;
     color: #3a4060 !important;
-    border: none !important;
-    border-radius: 6px !important;
-    padding: .45rem 1rem !important;
-    font-size: .82rem !important;
+    border: 1px solid rgba(255,255,255,.07) !important;
+    border-radius: 100px !important;
+    padding: .28rem 1.1rem !important;
+    font-size: .78rem !important;
     font-weight: 500 !important;
     font-family: 'Outfit', sans-serif !important;
     box-shadow: none !important;
-    letter-spacing: .3px !important;
-    transition: color .2s ease !important;
+    letter-spacing: .4px !important;
+    line-height: 1.5 !important;
+    transition: color .2s, border-color .2s, background .2s !important;
 }
-.stHorizontalBlock:first-of-type .stButton > button:hover {
-    background: transparent !important;
+[data-marquee-nav="1"] .stButton > button:hover {
+    background: rgba(99,102,241,.06) !important;
     color: #a5b4fc !important;
-    border: none !important;
+    border-color: rgba(99,102,241,.25) !important;
     box-shadow: none !important;
     transform: none !important;
+}
+/* Brand button */
+[data-marquee-nav="1"] .stColumn:first-child .stButton > button {
+    font-family: 'Bebas Neue', sans-serif !important;
+    font-size: 1.45rem !important;
+    letter-spacing: .1em !important;
+    color: #e8ebff !important;
+    border: none !important;
+    padding: .15rem 0 !important;
+    background: transparent !important;
+}
+[data-marquee-nav="1"] .stColumn:first-child .stButton > button:hover {
+    color: #c7d2fe !important;
+    background: transparent !important;
+    border: none !important;
+}
+[data-marquee-nav="1"] .stColumn:first-child .stButton > button::after {
+    content: '●';
+    font-size: .4rem;
+    color: #6366f1;
+    text-shadow: 0 0 8px rgba(99,102,241,.9);
+    margin-left: .38rem;
+    vertical-align: middle;
+    position: relative;
+    top: -2px;
 }
 
 /* ── CTA BUTTONS ── */
@@ -84,29 +110,6 @@ section[data-testid="stSidebar"] { display: none !important; }
     background: #4f46e5 !important;
     transform: translateY(-2px) !important;
     box-shadow: 0 8px 32px rgba(99,102,241,.32) !important;
-}
-
-/* ── BRAND ── */
-.brand {
-    display: flex;
-    align-items: center;
-    gap: .45rem;
-    padding: .35rem 0;
-}
-.brand-name {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.5rem;
-    letter-spacing: .1em;
-    color: #e8ebff;
-    line-height: 1;
-}
-.brand-dot {
-    width: 6px; height: 6px;
-    background: #6366f1;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #6366f1;
-    margin-bottom: 1px;
-    flex-shrink: 0;
 }
 
 /* ── NAV DIVIDER ── */
@@ -558,34 +561,64 @@ div[data-baseweb="select"] > div:hover {
 
 st.markdown(CSS, unsafe_allow_html=True)
 
-# Active nav highlight injection
-page = st.session_state.page
-_nav_col = {"home": 2, "collab": 3, "content": 4}.get(page, 2)
+# JS: tag the first stHorizontalBlock so CSS can target nav buttons reliably.
+# Uses MutationObserver to survive React re-renders.
 st.markdown(
-    f"""
-<style>
-.stHorizontalBlock:first-of-type .stColumn:nth-of-type({_nav_col}) .stButton > button {{
-    color: #a5b4fc !important;
-}}
-</style>
+    """
+<script>
+(function(){
+    var A='data-marquee-nav';
+    function tag(){
+        var el=document.querySelector('[data-testid="stHorizontalBlock"]');
+        if(el && !el.hasAttribute(A)){ el.setAttribute(A,'1'); }
+    }
+    tag();
+    var ob=new MutationObserver(function(){ tag(); });
+    ob.observe(document.body,{childList:true,subtree:true});
+    setTimeout(function(){ ob.disconnect(); },4000);
+})();
+</script>
 """,
     unsafe_allow_html=True,
 )
 
-# ── NAVIGATION ──────────────────────────────────────────────────────────────
-nav_cols = st.columns([3.5, 1, 1.4, 1.4])
-with nav_cols[0]:
+# Active nav highlight
+page = st.session_state.page
+_active = {"collab": 2, "content": 3}
+if page in _active:
+    _col = _active[page]
     st.markdown(
-        '<div class="brand"><div class="brand-name">MARQUEE</div><div class="brand-dot"></div></div>',
+        f"""
+<style>
+[data-marquee-nav="1"] .stColumn:nth-child({_col}) .stButton > button {{
+    color: #818cf8 !important;
+    border-color: rgba(99,102,241,.28) !important;
+    background: rgba(99,102,241,.06) !important;
+}}
+</style>
+""",
         unsafe_allow_html=True,
     )
-with nav_cols[1]:
-    if st.button("Home", key="nav_home", use_container_width=True):
+else:
+    # home active — brighten brand
+    st.markdown(
+        """
+<style>
+[data-marquee-nav="1"] .stColumn:first-child .stButton > button { color: #c7d2fe !important; }
+</style>
+""",
+        unsafe_allow_html=True,
+    )
+
+# ── NAVIGATION ──────────────────────────────────────────────────────────────
+nav_cols = st.columns([3.5, 1.4, 1.4])
+with nav_cols[0]:
+    if st.button("MARQUEE", key="nav_brand"):
         go("home")
-with nav_cols[2]:
+with nav_cols[1]:
     if st.button("Collaborative", key="nav_collab", use_container_width=True):
         go("collab")
-with nav_cols[3]:
+with nav_cols[2]:
     if st.button("Content-Based", key="nav_content", use_container_width=True):
         go("content")
 
