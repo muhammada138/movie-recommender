@@ -34,6 +34,11 @@ def load_data(ratings_path="data/ratings.csv", movies_path="data/movies.csv", li
     if 'imdbId' in links.columns:
         links['imdbId'] = links['imdbId'].apply(lambda x: str(x).zfill(7) if pd.notna(x) else x)
     movies = movies.merge(links[['movieId', 'tmdbId', 'imdbId']], on='movieId', how='left')
+    
+    # Extract year for time-based contextual penalization
+    movies['year'] = movies['title'].str.extract(r'\((\d{4})\)').astype(float)
+    movies['year'] = movies['year'].fillna(movies['year'].median())
+    
     movies['title'] = movies['title'].apply(format_title)
     return ratings, movies
 
@@ -111,6 +116,16 @@ def recommend_similar_movies(movie_ids, n=10):
     
     # Calculate average genre similarity vector for the selected movies
     avg_sim = genre_sim[indices].mean(axis=0)
+    
+    # Calculate the average year of the targeted movies
+    target_year = movies.iloc[indices]["year"].mean()
+    
+    # Apply a Gaussian year penalty (15-year standard deviation drops score naturally over time)
+    # Convert to numpy array to ensure dot matching with avg_sim
+    year_diff = movies["year"].values - target_year
+    year_penalty = np.exp(-(year_diff**2) / (2 * (15**2)))
+    
+    avg_sim = avg_sim * year_penalty
     
     sim_scores = list(enumerate(avg_sim))
     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
