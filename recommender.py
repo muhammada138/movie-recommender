@@ -116,8 +116,8 @@ def recommend_similar_movies(movie_ids, n=10):
     g_scores = linear_kernel(target_g_vec, gen_mat).flatten()
     t_scores = linear_kernel(target_t_vec, tag_mat).flatten()
     
-    # Blend genre (65%) and tag (35%) similarities
-    avg_sim = (g_scores * 0.65) + (t_scores * 0.35)
+    # Blend genre (45%) and tag (55%) similarities to favor contextual semantic tags over overly-broad MovieLens genres
+    avg_sim = (g_scores * 0.45) + (t_scores * 0.55)
     
     # Calculate the average year of the targeted movies
     target_year = movies.iloc[indices]["year"].mean()

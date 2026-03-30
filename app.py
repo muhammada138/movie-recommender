@@ -37,8 +37,17 @@ html, body, [class*="css"] {
 #MainMenu, footer, header { visibility: hidden !important; }
 .stDeployButton { display: none !important; }
 section[data-testid="stSidebar"] { display: none !important; }
-
 .stApp { background: #06070e !important; }
+
+/* ── MULTISELECT OVERRIDES (Prevent Truncation) ── */
+.stMultiSelect [data-baseweb="tag"] {
+    height: auto !important;
+    min-height: 24px !important;
+}
+.stMultiSelect [data-baseweb="tag"] span {
+    max-width: none !important;
+    white-space: normal !important;
+}
 
 .block-container {
     max-width: 1040px !important;
@@ -963,8 +972,7 @@ elif page == "content":
         imdb = f'<a class="imdb-link" href="https://www.imdb.com/title/tt{sel.get("imdbId")}/" target="_blank">IMDb</a>' if sel.get("imdbId") else ""
         providers = get_movie_details(sel.get("tmdbId"))
         stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
-        
-        ccard, cbtn = st.columns([11, 1], vertical_alignment="center")
+        ccard, cbtn = st.columns([11, 1])
         with ccard:
             st.markdown(f"""
 <div class="movie-card selected-card" style="margin-bottom:0.5rem;">
