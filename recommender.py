@@ -14,21 +14,31 @@ def format_title(title):
         return f"{article} {base}{rest}".strip()
     return title
 
-def load_data(ratings_path="data/ratings.csv", movies_path="data/movies.csv", links_path="data/links.csv", tags_path="data/tags.csv"):
+def load_data(ratings_path="data/ratings.csv", movies_path="data/movies.csv", links_path="data/links.csv", tags_path="data/tags.csv", keywords_path="data/tmdb_keywords.csv"):
     ratings = pd.read_csv(ratings_path)
     movies = pd.read_csv(movies_path)
     links = pd.read_csv(links_path)
     
+    # 1. Process MovieLens User Tags
     try:
         tags = pd.read_csv(tags_path)
-        tags['tag'] = tags['tag'].fillna('').astype(str)
-        # Lowercase tags for consistency
-        tags['tag'] = tags['tag'].str.lower()
+        tags['tag'] = tags['tag'].fillna('').astype(str).str.lower()
         grouped_tags = tags.groupby('movieId')['tag'].apply(lambda x: ' '.join(x)).reset_index()
         movies = movies.merge(grouped_tags, on='movieId', how='left')
-        movies['tag'] = movies['tag'].fillna('')
     except Exception:
         movies['tag'] = ''
+    
+    # 2. Process TMDB Contextual Keywords
+    try:
+        kw = pd.read_csv(keywords_path)
+        kw['keywords'] = kw['keywords'].fillna('').astype(str).str.lower()
+        movies = movies.merge(kw, on='movieId', how='left')
+    except Exception:
+        movies['keywords'] = ''
+
+    # 3. Combine both metadata sources into a single 'tag' column for TF-IDF
+    movies['tag'] = movies['tag'].fillna('') + ' ' + movies['keywords'].fillna('')
+    movies['tag'] = movies['tag'].str.strip()
 
     # IMDb ids might come as ints without leading zeros. TMDB formats them with 'tt' manually or we just pass the raw value.
     if 'imdbId' in links.columns:
