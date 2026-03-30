@@ -494,23 +494,25 @@ section[data-testid="stSidebar"] { display: none !important; }
 .ext-links { display: flex; gap: .4rem; align-items: center; margin-top: .15rem; flex-wrap: wrap;}
 .imdb-link {
     background: #f5c518;
-    color: #000;
-    font-size: .55rem;
+    color: #000 !important;
+    font-size: .75rem;
     font-weight: 800;
-    padding: .1rem .35rem;
+    padding: .2rem .5rem;
     border-radius: 4px;
     text-decoration: none;
-    line-height: 1;
+    line-height: 1.2;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
-.imdb-link:hover { opacity: .9; color: #000; }
+.imdb-link:hover { opacity: .9; }
 .stream-badge {
-    background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.1);
-    color: #a5b4fc;
-    font-size: .55rem;
-    padding: .1rem .35rem;
+    background: rgba(99,102,241,.1);
+    border: 1px solid rgba(99,102,241,.3);
+    color: #c7d2fe;
+    font-size: .7rem;
+    font-weight: 600;
+    padding: .2rem .5rem;
     border-radius: 4px;
-    line-height: 1;
+    line-height: 1.2;
 }
 .genre-pill {
     background: rgba(99,102,241,.07);
