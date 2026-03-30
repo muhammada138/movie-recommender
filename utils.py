@@ -25,3 +25,26 @@ def get_poster_url(tmdb_id):
     except Exception as e:
         print(f"Error fetching poster for TMDB ID {tmdb_id}: {e}")
     return None
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def get_movie_details(tmdb_id):
+    """
+    Fetches streaming providers (US) from TMDB.
+    """
+    providers = []
+    if pd.isna(tmdb_id) or not tmdb_id:
+        return providers
+        
+    url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}/watch/providers?api_key={TMDB_API_KEY}"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            us_data = data.get("results", {}).get("US", {})
+            flatrate = us_data.get("flatrate", [])
+            # Return max 3 providers to keep UI clean
+            providers = [p.get("provider_name") for p in flatrate[:3]]
+    except Exception as e:
+        print(f"Error fetching providers for TMDB ID {tmdb_id}: {e}")
+    
+    return providers
