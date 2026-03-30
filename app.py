@@ -950,9 +950,9 @@ elif page == "content":
         st.session_state.selected_movies = selection
         st.rerun()
 
-    # Show selection cards briefly
-    sel_html = '<div class="movie-list" style="margin-bottom: 2rem;">'
+    # Show selection cards with interactive removal
     selected_ids = []
+    st.markdown('<div class="movie-list" style="margin-bottom: 2rem;">', unsafe_allow_html=True)
     for t in selected_movie_titles:
         sel = movies[movies["title"] == t].iloc[0]
         selected_ids.append(sel["movieId"])
@@ -964,7 +964,10 @@ elif page == "content":
         providers = get_movie_details(sel.get("tmdbId"))
         stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
         
-        sel_html += f"""<div class="movie-card selected-card">
+        ccard, cbtn = st.columns([11, 1], vertical_alignment="center")
+        with ccard:
+            st.markdown(f"""
+<div class="movie-card selected-card" style="margin-bottom:0.5rem;">
     <div class="movie-rank">▶</div>
     {poster_html}
     <div class="movie-info">
@@ -972,9 +975,13 @@ elif page == "content":
         <div class="movie-genres">{sg}</div>
         <div class="ext-links">{imdb}{stream}</div>
     </div>
-</div>"""
-    sel_html += "</div>"
-    st.markdown(sel_html, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
+        with cbtn:
+            if st.button("❌", key=f"del_{sel['movieId']}", help="Remove from combination pool"):
+                st.session_state.selected_movies.remove(t)
+                st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("🔍 Find Similar Movies", key="content_btn"):
         with st.spinner("Matching and blending genre vectors…"):
