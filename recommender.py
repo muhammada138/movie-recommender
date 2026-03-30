@@ -109,8 +109,8 @@ def recommend_similar_movies(movie_ids, n=10):
     
     # Compute similarity ON-THE-FLY to prevent huge memory overhead (~2GB dense matrices)
     # Calculate average vectors for the selected movies
-    target_g_vec = gen_mat[indices].mean(axis=0)
-    target_t_vec = tag_mat[indices].mean(axis=0)
+    target_g_vec = np.asarray(gen_mat[indices].mean(axis=0))
+    target_t_vec = np.asarray(tag_mat[indices].mean(axis=0))
     
     # Calculate similarity scores against all movies
     g_scores = linear_kernel(target_g_vec, gen_mat).flatten()
