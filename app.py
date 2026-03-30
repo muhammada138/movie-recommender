@@ -937,8 +937,13 @@ elif page == "content":
         st.info("Please search and add at least one movie.")
         st.stop()
 
-    # Integrated pills for easy visual removal
-    selection = st.pills("Combined Movies Pool", selected_movie_titles, selection_mode="multi", default=selected_movie_titles)
+    # Integrated multiselect for easy visual removal
+    selection = st.multiselect(
+        "Combined Movies Pool", 
+        options=selected_movie_titles, 
+        default=selected_movie_titles,
+        help="Click the 'X' to remove a movie from your combo."
+    )
     if set(selection) != set(selected_movie_titles):
         st.session_state.selected_movies = selection
         st.rerun()
