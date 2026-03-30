@@ -7,7 +7,6 @@ Marquee is a modern, full-stack movie discovery platform that combines fundament
 Live Demo: [Marquee on Streamlit](https://cf-movie-recommender.streamlit.app/)
 
 ![Marquee Demo](assets/marquee_demo.png)
-_Note: To add your own screenshot, save a capture as assets/marquee_demo.png and push to Git._
 
 ---
 
