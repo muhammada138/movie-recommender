@@ -1,72 +1,101 @@
 # Movie Recommender
 
-Collaborative filtering on the MovieLens dataset. No LLMs, no APIs — just pandas, numpy, and scikit-learn implementing the algorithm from scratch.
+A recommendation system built completely from scratch. No APIs, no black boxes—just math, pandas, and scikit-learn proving how Netflix and Spotify powered their core models before deep learning.
 
-Live demo: [Streamlit Cloud](https://share.streamlit.io) _(deploy link goes here after Streamlit Cloud setup)_
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=streamlit&logoColor=white)
+![Scikit-Learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat&logo=scikit-learn&logoColor=white)
+![Pandas](https://img.shields.io/badge/pandas-150458?style=flat&logo=pandas&logoColor=white)
+
+Live demo: [Streamlit App](https://cf-movie-recommender.streamlit.app/) _(update this with your final app URL)_
 
 ![App Screenshot](assets/screenshot.png)
-## How it works
 
-The model builds a user×movie rating matrix (610 users × 9,724 movies) and computes cosine similarity between every pair of users. When you ask for recommendations for a given user, it:
+---
 
-1. Finds the K most similar users to you by cosine similarity
-2. Takes their ratings for movies you haven't seen
-3. Computes a weighted average — users who are more similar to you have more influence
-4. Returns the top N movies by that weighted score
+## What it does
 
-This is user-based collaborative filtering, the same core technique behind Netflix and Spotify's recommendation systems.
+Most tutorial ML projects call an external API. This project implements actual collaborative and content-based filtering algorithms from the ground up on a highly sparse matrix of 100,000+ real ratings. 
+
+**Key features:**
+
+- **User-Based Collaborative Filtering** - Computes a 610x610 user similarity matrix to recommend movies based on the tastes of your nearest neighbors
+- **Content-Based Similarity** - Generates TF-IDF vectors from movie genres to recommend semantically similar films, regardless of user ratings
+- **Matrix Factorization** - Evaluates a Truncated SVD model on the rating matrix to handle sparsity, achieving a much lower RMSE than pure distance metrics
+- **Cold-Start Handling** - Explicit minimum ratings filters and global mean fallbacks gracefully handle new users or unrated items
+- **Interactive UI** - Streamlit dashboard with dedicated tabs to test both the collaborative and content-based models live
+- **Proper ML Evaluation** - Strict 80/20 train/test split. Matrix similarities are rebuilt exclusively on training data to explicitly prevent data leakage
+
+---
+
+## Tech stack
+
+| Layer | Tech |
+|---|---|
+| Frontend / UI | Streamlit |
+| Data Processing | Pandas, NumPy |
+| Machine Learning | Scikit-Learn (Cosine Similarity, Linear Kernel, TruncatedSVD) |
+| Dataset | MovieLens Latest Small |
+
+---
+
+## Getting started
+
+You don't need any API keys. The dataset is inherently included in the `/data` directory.
+
+### Running Locally
+
+```bash
+git clone https://github.com/muhammada138/movie-recommender.git
+cd movie-recommender
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+### Running Evaluation / EDA
+
+To compute the RMSE of the collaborative filtering vs SVD:
+```bash
+python evaluate.py
+```
+
+To view the Exploratory Data Analysis:
+```bash
+# Note: jupyter, matplotlib, and seaborn are required for the notebook
+jupyter notebook notebooks/eda.ipynb
+```
+
+---
+
+## How the algorithm works
+
+The core `recommend_for_user` function relies entirely on mathematical similarity:
+
+1. Loads the 610 user × 9,724 movie sparse rating matrix (~98% empty)
+2. Computes the cosine similarity between every pair of users
+3. Finds the *K* most similar users to the target user
+4. Takes their ratings for movies the target user hasn't seen yet
+5. Computes a weighted average—giving inherently higher mathematical weight to users with a higher similarity score
+6. Returns the top *N* movies sorted by predicted weighted score
+
+---
 
 ## Model performance
 
-Evaluated on an 80/20 train/test split. The model sees only training ratings when computing similarity — no leakage.
+Evaluated against the held-out test data.
 
 | Method | RMSE |
 |---|---|
 | Latent Factor SVD (Mean-Centered) | **0.9304** |
 | User-Based Collaborative Filtering | 0.9764 |
-| Baseline (predict global mean) | 1.0488 |
+| Baseline (Predict global mean) | 1.0488 |
 
-The collaborative filtering model beats the baseline by ~7%, while the SVD matrix factorization approach further improves this, demonstrating exactly why SVD became the industry standard for sparse recommendation matrices.
+The basic collaborative model cleanly beats predicting the global mean by ~7%. However, the SVD matrix factorization outright outperforms it by uncovering latent features—demonstrating exactly why Matrix Factorization became the industry standard for sparse recommendation problems (like the Netflix Prize).
 
-## Known limitations
+---
 
-**Cold start:** If a user has no ratings (or very few), there's nothing to compute similarity against and the recommendations will be noisy. The model falls back to the global mean rating for users or movies not seen in training data. This is a fundamental limitation of collaborative filtering — it needs history to work well. Solutions include hybrid models (combining content-based with collaborative) or matrix factorization (SVD), but those add complexity this project deliberately avoids.
-
-**Sparsity:** The rating matrix is ~98% empty. Most users haven't rated most movies, so similarity scores are computed from relatively thin overlap.
-
-## Running locally
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-For EDA:
-```bash
-jupyter notebook notebooks/eda.ipynb
-```
-
-To run the RMSE evaluation:
-```bash
-python evaluate.py
-```
-
-## Dataset
+## Dataset & citations
 
 [MovieLens Latest Small](https://grouplens.org/datasets/movielens/latest/) — 100,836 ratings from 610 users on 9,742 movies. Ratings are on a 0.5–5.0 scale.
 
-F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. ACM Transactions on Interactive Intelligent Systems (TiiS) 5, 4: 22:1–22:19.
-
-## Project structure
-
-```
-├── app.py              # Streamlit web app
-├── recommender.py      # core model logic
-├── evaluate.py         # RMSE evaluation on train/test split
-├── data/
-│   ├── movies.csv
-│   └── ratings.csv
-├── notebooks/
-│   └── eda.ipynb       # exploratory data analysis
-└── requirements.txt
-```
+> F. Maxwell Harper and Joseph A. Konstan. 2015. The MovieLens Datasets: History and Context. ACM Transactions on Interactive Intelligent Systems (TiiS) 5, 4: 22:1–22:19.
