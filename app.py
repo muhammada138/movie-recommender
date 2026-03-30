@@ -7,6 +7,7 @@ from recommender import (
     get_user_rating_count,
     recommend_similar_movies,
 )
+from utils import get_poster_url
 
 st.set_page_config(
     page_title="Marquee",
@@ -471,6 +472,14 @@ section[data-testid="stSidebar"] { display: none !important; }
     line-height: 1;
 }
 .movie-info { flex: 1; min-width: 0; }
+.movie-poster {
+    width: 42px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
 .movie-title {
     font-size: .9rem;
     font-weight: 600;
@@ -830,9 +839,12 @@ elif page == "collab":
                 f'<span class="genre-pill">{x.strip()}</span>'
                 for x in rec["genres"].split("|")
             )
+            poster = get_poster_url(rec.get("tmdbId"))
+            poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
             cards_html += f"""
 <div class="movie-card">
     <div class="movie-rank">{i:02d}</div>
+    {poster_html}
     <div class="movie-info">
         <div class="movie-title">{rec['title']}</div>
         <div class="movie-genres">{g}</div>
@@ -864,52 +876,61 @@ elif page == "content":
     col_m, col_n2 = st.columns([3, 1])
     with col_m:
         movie_titles = sorted(movies["title"].unique().tolist())
-        selected_movie_title = st.selectbox(
-            "Search for a movie",
+        selected_movie_titles = st.multiselect(
+            "Search for movies to combine their styles",
             movie_titles,
-            index=0,
-            help="Start typing to filter the catalogue.",
+            default=[movie_titles[50]], # just a default movie
+            help="Select one or more movies to generate recommendations based on their combined genre profile.",
         )
     with col_n2:
-        n_recs = st.slider("Results", 5, 20, 10, help="How many similar movies.")
+        n_recs = st.slider("Results", 5, 20, 10, key="cb_n_recs", help="How many similar movies.")
 
-    sel = movies[movies["title"] == selected_movie_title].iloc[0]
-    sg = "".join(
-        f'<span class="genre-pill">{x.strip()}</span>'
-        for x in sel["genres"].split("|")
-    )
-    st.markdown(
-        f"""<div class="movie-card selected-card">
+    if not selected_movie_titles:
+        st.warning("Please select at least one movie.")
+        st.stop()
+
+    # Show selection cards
+    sel_html = '<div class="movie-list" style="margin-bottom: 2rem;">'
+    selected_ids = []
+    for t in selected_movie_titles:
+        sel = movies[movies["title"] == t].iloc[0]
+        selected_ids.append(sel["movieId"])
+        sg = "".join(f'<span class="genre-pill">{x.strip()}</span>' for x in sel["genres"].split("|"))
+        poster = get_poster_url(sel.get("tmdbId"))
+        poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
+        sel_html += f"""<div class="movie-card selected-card">
     <div class="movie-rank">▶</div>
+    {poster_html}
     <div class="movie-info">
         <div class="movie-title">{sel['title']}</div>
         <div class="movie-genres">{sg}</div>
     </div>
-</div>""",
-        unsafe_allow_html=True,
-    )
+</div>"""
+    sel_html += "</div>"
+    st.markdown(sel_html, unsafe_allow_html=True)
 
     if st.button("🔍 Find Similar Movies", key="content_btn"):
-        with st.spinner("Matching genre vectors…"):
+        with st.spinner("Matching and blending genre vectors…"):
             try:
-                sim_recs = recommend_similar_movies(sel["movieId"], n=n_recs)
+                sim_recs = recommend_similar_movies(selected_ids, n=n_recs)
             except Exception as e:
                 st.error(str(e))
                 st.stop()
 
+        titles_str = ", ".join(selected_movie_titles) if len(selected_movie_titles) <= 3 else f"{len(selected_movie_titles)} movies"
         st.markdown(
-            f'<div class="sec-hdr">🍿 Similar to: {selected_movie_title}</div>',
+            f'<div class="sec-hdr">🍿 Inspired by: {titles_str}</div>',
             unsafe_allow_html=True,
         )
         cards_html = '<div class="movie-list">'
         for i, rec in enumerate(sim_recs, 1):
-            g = "".join(
-                f'<span class="genre-pill">{x.strip()}</span>'
-                for x in rec["genres"].split("|")
-            )
+            g = "".join(f'<span class="genre-pill">{x.strip()}</span>' for x in rec["genres"].split("|"))
+            poster = get_poster_url(rec.get("tmdbId"))
+            poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
             cards_html += f"""
 <div class="movie-card">
     <div class="movie-rank">{i:02d}</div>
+    {poster_html}
     <div class="movie-info">
         <div class="movie-title">{rec['title']}</div>
         <div class="movie-genres">{g}</div>
@@ -921,4 +942,4 @@ elif page == "content":
 </div>"""
         cards_html += "</div>"
         st.markdown(cards_html, unsafe_allow_html=True)
-        st.caption("Similarity = cosine similarity between TF-IDF genre vectors. 1.0 = identical.")
+        st.caption("Similarity = cosine similarity between the average TF-IDF vectors of your picks and the entire dataset.")
