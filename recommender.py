@@ -1,13 +1,27 @@
 import pandas as pd
 import numpy as np
+import re
 from sklearn.metrics.pairwise import cosine_similarity
 
+
+def format_title(title):
+    match = re.search(r'^(.*?)(,\s*(The|A|An))((\s*\(.*?\))*)$', title)
+    if match:
+        base = match.group(1)
+        article = match.group(3)
+        rest = match.group(4)
+        return f"{article} {base}{rest}".strip()
+    return title
 
 def load_data(ratings_path="data/ratings.csv", movies_path="data/movies.csv", links_path="data/links.csv"):
     ratings = pd.read_csv(ratings_path)
     movies = pd.read_csv(movies_path)
     links = pd.read_csv(links_path)
-    movies = movies.merge(links[['movieId', 'tmdbId']], on='movieId', how='left')
+    # IMDb ids might come as ints without leading zeros. TMDB formats them with 'tt' manually or we just pass the raw value.
+    if 'imdbId' in links.columns:
+        links['imdbId'] = links['imdbId'].apply(lambda x: str(x).zfill(7) if pd.notna(x) else x)
+    movies = movies.merge(links[['movieId', 'tmdbId', 'imdbId']], on='movieId', how='left')
+    movies['title'] = movies['title'].apply(format_title)
     return ratings, movies
 
 
@@ -93,6 +107,7 @@ def recommend_similar_movies(movie_ids, n=10):
             "title": movies.iloc[i]["title"],
             "genres": movies.iloc[i]["genres"],
             "tmdbId": movies.iloc[i]["tmdbId"],
+            "imdbId": movies.iloc[i].get("imdbId"),
             "score": round(float(score), 3),
         })
     return result
@@ -105,12 +120,14 @@ def recommend_for_user(user_id, n=10, top_k_users=5):
         title_row = movies[movies["movieId"] == movie_id]["title"].values
         genres_row = movies[movies["movieId"] == movie_id]["genres"].values
         tmdb_row = movies[movies["movieId"] == movie_id]["tmdbId"].values
+        imdb_row = movies[movies["movieId"] == movie_id]["imdbId"].values
         if len(title_row) > 0:
             result.append({
                 "movieId": movie_id,
                 "title": title_row[0],
                 "genres": genres_row[0] if len(genres_row) > 0 else "",
                 "tmdbId": tmdb_row[0] if len(tmdb_row) > 0 else None,
+                "imdbId": imdb_row[0] if len(imdb_row) > 0 else None,
                 "score": round(float(score), 3),
             })
     return result
