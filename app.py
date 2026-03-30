@@ -80,6 +80,7 @@ section[data-testid="stSidebar"] { display: none !important; }
     color: #c7d2fe !important;
     background: transparent !important;
     border: none !important;
+    box-shadow: none !important;
 }
 [data-marquee-nav="1"] .stColumn:first-child .stButton > button::after {
     content: '●';
@@ -94,22 +95,24 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 /* ── CTA BUTTONS ── */
 .stButton > button {
-    background: #6366f1 !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 10px !important;
-    padding: .65rem 1.8rem !important;
-    font-weight: 600 !important;
-    font-size: .88rem !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    color: #eef0ff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    padding: .5rem 1.25rem !important;
+    font-weight: 500 !important;
+    font-size: .85rem !important;
     font-family: 'Outfit', sans-serif !important;
     letter-spacing: .3px !important;
     transition: all .2s cubic-bezier(.4,0,.2,1) !important;
-    box-shadow: 0 4px 24px rgba(99,102,241,.2) !important;
+    box-shadow: none !important;
 }
 .stButton > button:hover {
-    background: #4f46e5 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 8px 32px rgba(99,102,241,.32) !important;
+    background: rgba(99,102,241,.12) !important;
+    color: #c7d2fe !important;
+    border-color: rgba(99,102,241,.3) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 16px rgba(99,102,241,.18) !important;
 }
 
 /* ── NAV DIVIDER ── */
@@ -183,13 +186,15 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 /* ── STATS STRIP ── */
 .stats-strip {
-    display: inline-flex;
+    display: flex;
+    justify-content: center;
+    max-width: max-content;
+    margin: 0 auto 4rem;
     align-items: stretch;
     border: 1px solid rgba(255,255,255,.05);
     border-radius: 14px;
     background: rgba(255,255,255,.02);
     overflow: hidden;
-    margin-bottom: 4rem;
 }
 .stat-item {
     padding: .75rem 1.5rem;
@@ -742,7 +747,7 @@ elif page == "collab":
         """
 <div class="page-hdr">
     <h2>👥 Collaborative</h2>
-    <p>Pick a user from the MovieLens dataset and discover movies predicted from the tastes of their most similar neighbours.</p>
+    <p>Discover movies by leveraging the tastes of other real users in our dataset.</p>
 </div>
 """,
         unsafe_allow_html=True,
@@ -751,9 +756,7 @@ elif page == "collab":
     st.markdown(
         """
 <div class="info-box">
-    💡 Each <strong>User ID</strong> is a real, anonymised person from the
-    <a href="https://grouplens.org/datasets/movielens/">MovieLens</a> research dataset.
-    The model finds their closest neighbours and predicts scores for movies they haven't seen.
+    💡 <strong>How it works:</strong> We find people with similar movie tastes to yours (your "<strong>Neighbors</strong>"). We then predict the movies you'd rate highly based on what your closest neighbors loved.
 </div>
 """,
         unsafe_allow_html=True,
@@ -766,12 +769,12 @@ elif page == "collab":
             "Pick a user",
             user_ids,
             index=0,
-            help="Each number is an anonymised person who has rated movies.",
+            help="Select an anonymised user profile from the dataset to generate recommendations for.",
         )
     with col_k:
-        top_k = st.slider("Neighbors (K)", 3, 20, 5, help="Similar users to consider.")
+        top_k = st.slider("Neighbors", 3, 20, 5, help="How many similar users' tastes to look at when deciding what to recommend.")
     with col_n:
-        n_recs = st.slider("Results", 5, 20, 10, help="How many recommendations.")
+        n_recs = st.slider("Results", 5, 20, 10, help="How many movie recommendations you want to see.")
 
     rating_count = get_user_rating_count(user_id, ratings)
     user_ratings_df = (
