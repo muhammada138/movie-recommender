@@ -7,7 +7,7 @@ from recommender import (
     get_user_rating_count,
     recommend_similar_movies,
 )
-from utils import get_poster_url
+from utils import get_poster_url, get_movie_details
 
 st.set_page_config(
     page_title="Marquee",
@@ -484,13 +484,34 @@ section[data-testid="stSidebar"] { display: none !important; }
     font-size: .9rem;
     font-weight: 600;
     color: #dde1f5;
-    margin: 0 0 .35rem;
+    margin: 0 0 .2rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     letter-spacing: -.01em;
 }
-.movie-genres { display: flex; flex-wrap: wrap; gap: .2rem; }
+.movie-genres { display: flex; flex-wrap: wrap; gap: .2rem; margin-bottom: .3rem; }
+.ext-links { display: flex; gap: .4rem; align-items: center; margin-top: .15rem; flex-wrap: wrap;}
+.imdb-link {
+    background: #f5c518;
+    color: #000;
+    font-size: .55rem;
+    font-weight: 800;
+    padding: .1rem .35rem;
+    border-radius: 4px;
+    text-decoration: none;
+    line-height: 1;
+}
+.imdb-link:hover { opacity: .9; color: #000; }
+.stream-badge {
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.1);
+    color: #a5b4fc;
+    font-size: .55rem;
+    padding: .1rem .35rem;
+    border-radius: 4px;
+    line-height: 1;
+}
 .genre-pill {
     background: rgba(99,102,241,.07);
     border: 1px solid rgba(99,102,241,.1);
@@ -841,6 +862,11 @@ elif page == "collab":
             )
             poster = get_poster_url(rec.get("tmdbId"))
             poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
+            
+            imdb = f'<a class="imdb-link" href="https://www.imdb.com/title/tt{rec.get("imdbId")}/" target="_blank">IMDb</a>' if rec.get("imdbId") else ""
+            providers = get_movie_details(rec.get("tmdbId"))
+            stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
+            
             cards_html += f"""
 <div class="movie-card">
     <div class="movie-rank">{i:02d}</div>
@@ -848,6 +874,7 @@ elif page == "collab":
     <div class="movie-info">
         <div class="movie-title">{rec['title']}</div>
         <div class="movie-genres">{g}</div>
+        <div class="ext-links">{imdb}{stream}</div>
     </div>
     <div class="movie-score">
         <span class="score-val">{rec['score']:.2f}</span>
@@ -873,23 +900,50 @@ elif page == "content":
         unsafe_allow_html=True,
     )
 
+    if "selected_movies" not in st.session_state:
+        st.session_state.selected_movies = [movies["title"].iloc[50]] # default movie
+
     col_m, col_n2 = st.columns([3, 1])
     with col_m:
-        movie_titles = sorted(movies["title"].unique().tolist())
-        selected_movie_titles = st.multiselect(
-            "Search for movies to combine their styles",
-            movie_titles,
-            default=[movie_titles[50]], # just a default movie
-            help="Select one or more movies to generate recommendations based on their combined genre profile.",
-        )
+        st.markdown("<p style='font-size:.88rem; font-weight:600; color:#dde1f5; margin-bottom:.2rem;'>Search for a movie</p>", unsafe_allow_html=True)
+        search_query = st.text_input("Search", key="search_query", label_visibility="collapsed", placeholder="Type a movie name...")
+        
+        # Real-time search matches
+        if search_query:
+            matches = movies[movies['title'].str.contains(search_query, case=False, regex=False)]
+            if not matches.empty:
+                st.markdown("<div style='background:rgba(255,255,255,.03); padding:1rem; border-radius:10px; margin-bottom:1rem;'>", unsafe_allow_html=True)
+                for match in matches.head(4).itertuples():
+                    rc1, rc2, rc3 = st.columns([.5, 4, 1.5])
+                    with rc1:
+                        post = get_poster_url(getattr(match, "tmdbId", None))
+                        if post:
+                            st.markdown(f'<img src="{post}" style="width:30px; border-radius:4px;">', unsafe_allow_html=True)
+                    with rc2:
+                        st.markdown(f"<span style='font-size:.85rem; color:#eef0ff;'>{match.title}</span>", unsafe_allow_html=True)
+                    with rc3:
+                        if st.button("Add", key=f"add_{match.movieId}"):
+                            if match.title not in st.session_state.selected_movies:
+                                st.session_state.selected_movies.append(match.title)
+                                st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
+
     with col_n2:
         n_recs = st.slider("Results", 5, 20, 10, key="cb_n_recs", help="How many similar movies.")
 
+    selected_movie_titles = st.session_state.selected_movies
+
     if not selected_movie_titles:
-        st.warning("Please select at least one movie.")
+        st.info("Please search and add at least one movie.")
         st.stop()
 
-    # Show selection cards
+    # Integrated pills for easy visual removal
+    selection = st.pills("Combined Movies Pool", selected_movie_titles, selection_mode="multi", default=selected_movie_titles)
+    if set(selection) != set(selected_movie_titles):
+        st.session_state.selected_movies = selection
+        st.rerun()
+
+    # Show selection cards briefly
     sel_html = '<div class="movie-list" style="margin-bottom: 2rem;">'
     selected_ids = []
     for t in selected_movie_titles:
@@ -898,12 +952,18 @@ elif page == "content":
         sg = "".join(f'<span class="genre-pill">{x.strip()}</span>' for x in sel["genres"].split("|"))
         poster = get_poster_url(sel.get("tmdbId"))
         poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
+        
+        imdb = f'<a class="imdb-link" href="https://www.imdb.com/title/tt{sel.get("imdbId")}/" target="_blank">IMDb</a>' if sel.get("imdbId") else ""
+        providers = get_movie_details(sel.get("tmdbId"))
+        stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
+        
         sel_html += f"""<div class="movie-card selected-card">
     <div class="movie-rank">▶</div>
     {poster_html}
     <div class="movie-info">
         <div class="movie-title">{sel['title']}</div>
         <div class="movie-genres">{sg}</div>
+        <div class="ext-links">{imdb}{stream}</div>
     </div>
 </div>"""
     sel_html += "</div>"
@@ -927,6 +987,11 @@ elif page == "content":
             g = "".join(f'<span class="genre-pill">{x.strip()}</span>' for x in rec["genres"].split("|"))
             poster = get_poster_url(rec.get("tmdbId"))
             poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
+            
+            imdb = f'<a class="imdb-link" href="https://www.imdb.com/title/tt{rec.get("imdbId")}/" target="_blank">IMDb</a>' if rec.get("imdbId") else ""
+            providers = get_movie_details(rec.get("tmdbId"))
+            stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
+
             cards_html += f"""
 <div class="movie-card">
     <div class="movie-rank">{i:02d}</div>
@@ -934,6 +999,7 @@ elif page == "content":
     <div class="movie-info">
         <div class="movie-title">{rec['title']}</div>
         <div class="movie-genres">{g}</div>
+        <div class="ext-links">{imdb}{stream}</div>
     </div>
     <div class="movie-score">
         <span class="score-val">{rec['score']:.2f}</span>
