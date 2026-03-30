@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 import re
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity, linear_kernel
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 def format_title(title):
@@ -82,16 +83,20 @@ ratings, movies = load_data()
 matrix = build_user_item_matrix(ratings)
 similarity_df = build_similarity_matrix(matrix)
 
-# build content-based similarity matrix globally
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel
-
 movies['genres_str'] = movies['genres'].str.replace('|', ' ').str.lower()
-movies['metadata'] = movies['genres_str'] + " " + movies.get('tag', '')
 
-tfidf = TfidfVectorizer(stop_words='english')
-tfidf_matrix = tfidf.fit_transform(movies['metadata'])
-genre_sim = linear_kernel(tfidf_matrix, tfidf_matrix)
+# Vectorize genres and tags separately to avoid dense tags destroying genre L2 norm weights
+gen_tfidf = TfidfVectorizer(stop_words='english')
+gen_mat = gen_tfidf.fit_transform(movies['genres_str'])
+
+tag_tfidf = TfidfVectorizer(stop_words='english')
+tag_mat = tag_tfidf.fit_transform(movies['tag'])
+
+g_sim = linear_kernel(gen_mat, gen_mat)
+t_sim = linear_kernel(tag_mat, tag_mat)
+
+# 65% baseline genre structural match, 35% user contextual tag match
+genre_sim = (g_sim * 0.65) + (t_sim * 0.35)
 
 
 def recommend_similar_movies(movie_ids, n=10):
