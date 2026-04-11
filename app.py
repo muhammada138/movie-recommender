@@ -656,41 +656,59 @@ else:
         unsafe_allow_html=True,
     )
 
+def _get_movie_card_html(movie, rank_label="▶", is_ranked=False, score=None, score_label="score"):
+    """Internal helper for generating a single movie card's HTML."""
+    genres_html = "".join(
+        f'<span class="genre-pill">{x.strip()}</span>'
+        for x in movie["genres"].split("|")
+    )
+    poster = get_poster_url(movie.get("tmdbId"))
+    poster_html = (
+        f'<img class="movie-poster" src="{poster}" />'
+        if poster
+        else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
+    )
+
+    imdb = (
+        f'<a class="imdb-link" href="https://www.imdb.com/title/tt{movie.get("imdbId")}/" target="_blank">IMDb</a>'
+        if movie.get("imdbId")
+        else ""
+    )
+    providers = get_movie_details(movie.get("tmdbId"))
+    stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
+
+    score_html = ""
+    if score is not None:
+        score_html = f"""
+    <div class="movie-score">
+        <span class="score-val">{score:.2f}</span>
+        <span class="score-lbl">{score_label}</span>
+    </div>"""
+
+    return f"""
+<div class="movie-card">
+    <div class="movie-rank">{rank_label}</div>
+    {poster_html}
+    <div class="movie-info">
+        <div class="movie-title">{movie['title']}</div>
+        <div class="movie-genres">{genres_html}</div>
+        <div class="ext-links">{imdb}{stream}</div>
+    </div>
+    {score_html}
+</div>"""
+
+
 def render_movie_cards(recommendations, is_ranked=True):
     """Helper to render movie cards consistently."""
     cards_html = '<div class="movie-list">'
     for i, rec in enumerate(recommendations, 1):
-        g = "".join(
-            f'<span class="genre-pill">{x.strip()}</span>'
-            for x in rec["genres"].split("|")
-        )
-        poster = get_poster_url(rec.get("tmdbId"))
-        poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
-        
-        imdb = f'<a class="imdb-link" href="https://www.imdb.com/title/tt{rec.get("imdbId")}/" target="_blank">IMDb</a>' if rec.get("imdbId") else ""
-        providers = get_movie_details(rec.get("tmdbId"))
-        stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
-        
-        rank_html = f'<div class="movie-rank">{i:02d}</div>' if is_ranked else '<div class="movie-rank">▶</div>'
+        rank_label = f"{i:02d}" if is_ranked else "▶"
         score_label = "score" if is_ranked else "sim"
-        
-        cards_html += f"""
-<div class="movie-card">
-    {rank_html}
-    {poster_html}
-    <div class="movie-info">
-        <div class="movie-title">{rec['title']}</div>
-        <div class="movie-genres">{g}</div>
-        <div class="ext-links">{imdb}{stream}</div>
-    </div>
-    <div class="movie-score">
-        <span class="score-val">{rec['score']:.2f}</span>
-        <span class="score-lbl">{score_label}</span>
-    </div>
-</div>"""
+        cards_html += _get_movie_card_html(
+            rec, rank_label, is_ranked, rec.get("score"), score_label
+        )
     cards_html += "</div>"
     st.markdown(cards_html, unsafe_allow_html=True)
-
 
 # ── NAVIGATION ──────────────────────────────────────────────────────────────
 nav_cols = st.columns([3.5, 1.4, 1.4])
@@ -968,31 +986,16 @@ elif page == "content":
         st.rerun()
 
     # Show selection cards with interactive removal
-    selected_ids = []
     st.markdown('<div class="movie-list" style="margin-bottom: 2rem;">', unsafe_allow_html=True)
     for t in selected_movie_titles:
         sel = movies[movies["title"] == t].iloc[0]
-        selected_ids.append(sel["movieId"])
-        sg = "".join(f'<span class="genre-pill">{x.strip()}</span>' for x in sel["genres"].split("|"))
-        poster = get_poster_url(sel.get("tmdbId"))
-        poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
         
-        imdb = f'<a class="imdb-link" href="https://www.imdb.com/title/tt{sel.get("imdbId")}/" target="_blank">IMDb</a>' if sel.get("imdbId") else ""
-        providers = get_movie_details(sel.get("tmdbId"))
-        stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
         ccard, cbtn = st.columns([11, 1])
         with ccard:
-            st.markdown(f"""
-<div class="movie-card selected-card" style="margin-bottom:0.5rem;">
-    <div class="movie-rank">▶</div>
-    {poster_html}
-    <div class="movie-info">
-        <div class="movie-title">{sel['title']}</div>
-        <div class="movie-genres">{sg}</div>
-        <div class="ext-links">{imdb}{stream}</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+            card_html = _get_movie_card_html(sel, rank_label="▶")
+            # Injecting the selected-card class for extra styling
+            card_html = card_html.replace('class="movie-card"', 'class="movie-card selected-card"')
+            st.markdown(card_html, unsafe_allow_html=True)
         with cbtn:
             if st.button("❌", key=f"del_{sel['movieId']}", help="Remove from combination pool"):
                 st.session_state.selected_movies.remove(t)
