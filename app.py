@@ -9,6 +9,14 @@ from recommender import (
 )
 from utils import get_poster_url, get_movie_details
 
+@st.cache_data(show_spinner=False)
+def get_user_recs(user_id, n, top_k):
+    return recommend_for_user(user_id, n=n, top_k_users=top_k)
+
+@st.cache_data(show_spinner=False)
+def get_content_recs(movie_ids, n):
+    return recommend_similar_movies(movie_ids, n=n)
+
 st.set_page_config(
     page_title="Marquee",
     page_icon="🎞️",
@@ -910,7 +918,7 @@ elif page == "collab":
     if st.button("🚀 Get Recommendations", key="collab_btn"):
         with st.spinner("Crunching similarities…"):
             try:
-                recs = recommend_for_user(user_id, n=n_recs, top_k_users=top_k)
+                recs = get_user_recs(user_id, n=n_recs, top_k=top_k)
             except ValueError as e:
                 st.error(str(e))
                 st.stop()
@@ -940,33 +948,38 @@ elif page == "content":
     if "selected_movies" not in st.session_state:
         st.session_state.selected_movies = [movies["title"].iloc[50]] # default movie
 
-    col_m, col_n2 = st.columns([3, 1])
-    with col_m:
-        st.markdown("<p style='font-size:.88rem; font-weight:600; color:#dde1f5; margin-bottom:.2rem;'>Search for a movie</p>", unsafe_allow_html=True)
-        search_query = st.text_input("Search", key="search_query", label_visibility="collapsed", placeholder="Type a movie name...")
-        
-        # Real-time search matches
-        if search_query:
-            matches = movies[movies['title'].str.contains(search_query, case=False, regex=False)]
-            if not matches.empty:
-                st.markdown("<div style='background:rgba(255,255,255,.03); padding:1rem; border-radius:10px; margin-bottom:1rem;'>", unsafe_allow_html=True)
-                for match in matches.head(4).itertuples():
-                    rc1, rc2, rc3 = st.columns([.5, 4, 1.5])
-                    with rc1:
-                        post = get_poster_url(getattr(match, "tmdbId", None))
-                        if post:
-                            st.markdown(f'<img src="{post}" style="width:30px; border-radius:4px;">', unsafe_allow_html=True)
-                    with rc2:
-                        st.markdown(f"<span style='font-size:.85rem; color:#eef0ff;'>{match.title}</span>", unsafe_allow_html=True)
-                    with rc3:
-                        if st.button("Add", key=f"add_{match.movieId}"):
-                            if match.title not in st.session_state.selected_movies:
-                                st.session_state.selected_movies.append(match.title)
-                                st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
+    @st.fragment
+    def search_and_settings():
+        col_m, col_n2 = st.columns([3, 1])
+        with col_m:
+            st.markdown("<p style='font-size:.88rem; font-weight:600; color:#dde1f5; margin-bottom:.2rem;'>Search for a movie</p>", unsafe_allow_html=True)
+            search_query = st.text_input("Search", key="search_query", label_visibility="collapsed", placeholder="Type a movie name...")
+            
+            # Real-time search matches
+            if search_query:
+                matches = movies[movies['title'].str.contains(search_query, case=False, regex=False)]
+                if not matches.empty:
+                    st.markdown("<div style='background:rgba(255,255,255,.03); padding:1rem; border-radius:10px; margin-bottom:1rem;'>", unsafe_allow_html=True)
+                    for match in matches.head(4).itertuples():
+                        rc1, rc2, rc3 = st.columns([.5, 4, 1.5])
+                        with rc1:
+                            post = get_poster_url(getattr(match, "tmdbId", None))
+                            if post:
+                                st.markdown(f'<img src="{post}" style="width:30px; border-radius:4px;">', unsafe_allow_html=True)
+                        with rc2:
+                            st.markdown(f"<span style='font-size:.85rem; color:#eef0ff;'>{match.title}</span>", unsafe_allow_html=True)
+                        with rc3:
+                            if st.button("Add", key=f"add_{match.movieId}"):
+                                if match.title not in st.session_state.selected_movies:
+                                    st.session_state.selected_movies.append(match.title)
+                                    st.rerun()
+                    st.markdown("</div>", unsafe_allow_html=True)
 
-    with col_n2:
-        n_recs = st.slider("Results", 5, 20, 10, key="cb_n_recs", help="How many similar movies.")
+        with col_n2:
+            st.slider("Results", 5, 20, 10, key="cb_n_recs", help="How many similar movies.")
+
+    search_and_settings()
+    n_recs = st.session_state.cb_n_recs
 
     selected_movie_titles = st.session_state.selected_movies
 
@@ -1005,7 +1018,8 @@ elif page == "content":
     if st.button("🔍 Find Similar Movies", key="content_btn"):
         with st.spinner("Matching and blending genre vectors…"):
             try:
-                sim_recs = recommend_similar_movies(selected_ids, n=n_recs)
+                selected_ids = movies[movies["title"].isin(selected_movie_titles)]["movieId"].tolist()
+                sim_recs = get_content_recs(selected_ids, n=n_recs)
             except Exception as e:
                 st.error(str(e))
                 st.stop()
