@@ -19,6 +19,13 @@ Most recommendation tutorials rely on high-level APIs or "black box" models. Mar
 - **Hybrid Content-Based Discovery**: A sophisticated blending engine that uses TF-IDF vectors from both movie genres and over 9,000+ TMDB keywords (like "street racing" or "superhero") to find deep semantic matches.
 - **Gaussian Temporal Decay**: Automatically prioritizes movies from similar release eras, ensuring that if you're looking for modern blockbusters, the engine won't just dump 1940s classics on you.
 
+### 🛠️ Robustness & Performance Refactoring (Recent)
+- **Centralized Formatting**: Unified movie recommendation output logic across all algorithms to ensure data consistency.
+- **Data Loading Resilience**: Added comprehensive error handling and fallbacks for data file loading to prevent application crashes.
+- **TMDB API Optimization**: Dry-ed up TMDB API calls with a centralized requester and improved caching strategies.
+- **Efficient Lookups**: Optimized user recommendation logic by replacing iterative DataFrame lookups with vectorized index mapping.
+- **Logging & Monitoring**: Integrated Python's logging module for better visibility into data processing and API interaction issues.
+
 ### 🎨 Premium Visual Experience
 - **Visual Search**: Real-time fuzzy search that renders high-quality movie posters as you type.
 - **Combination Pool**: Add multiple movies to a "shopping cart" to find a single perfect recommendation that satisfies the intersection of all your inputs.

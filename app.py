@@ -656,6 +656,42 @@ else:
         unsafe_allow_html=True,
     )
 
+def render_movie_cards(recommendations, is_ranked=True):
+    """Helper to render movie cards consistently."""
+    cards_html = '<div class="movie-list">'
+    for i, rec in enumerate(recommendations, 1):
+        g = "".join(
+            f'<span class="genre-pill">{x.strip()}</span>'
+            for x in rec["genres"].split("|")
+        )
+        poster = get_poster_url(rec.get("tmdbId"))
+        poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
+        
+        imdb = f'<a class="imdb-link" href="https://www.imdb.com/title/tt{rec.get("imdbId")}/" target="_blank">IMDb</a>' if rec.get("imdbId") else ""
+        providers = get_movie_details(rec.get("tmdbId"))
+        stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
+        
+        rank_html = f'<div class="movie-rank">{i:02d}</div>' if is_ranked else '<div class="movie-rank">▶</div>'
+        score_label = "score" if is_ranked else "sim"
+        
+        cards_html += f"""
+<div class="movie-card">
+    {rank_html}
+    {poster_html}
+    <div class="movie-info">
+        <div class="movie-title">{rec['title']}</div>
+        <div class="movie-genres">{g}</div>
+        <div class="ext-links">{imdb}{stream}</div>
+    </div>
+    <div class="movie-score">
+        <span class="score-val">{rec['score']:.2f}</span>
+        <span class="score-lbl">{score_label}</span>
+    </div>
+</div>"""
+    cards_html += "</div>"
+    st.markdown(cards_html, unsafe_allow_html=True)
+
+
 # ── NAVIGATION ──────────────────────────────────────────────────────────────
 nav_cols = st.columns([3.5, 1.4, 1.4])
 with nav_cols[0]:
@@ -865,35 +901,7 @@ elif page == "collab":
             f'<div class="sec-hdr">🍿 Top {len(recs)} picks for User {user_id}</div>',
             unsafe_allow_html=True,
         )
-        cards_html = '<div class="movie-list">'
-        for i, rec in enumerate(recs, 1):
-            g = "".join(
-                f'<span class="genre-pill">{x.strip()}</span>'
-                for x in rec["genres"].split("|")
-            )
-            poster = get_poster_url(rec.get("tmdbId"))
-            poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
-            
-            imdb = f'<a class="imdb-link" href="https://www.imdb.com/title/tt{rec.get("imdbId")}/" target="_blank">IMDb</a>' if rec.get("imdbId") else ""
-            providers = get_movie_details(rec.get("tmdbId"))
-            stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
-            
-            cards_html += f"""
-<div class="movie-card">
-    <div class="movie-rank">{i:02d}</div>
-    {poster_html}
-    <div class="movie-info">
-        <div class="movie-title">{rec['title']}</div>
-        <div class="movie-genres">{g}</div>
-        <div class="ext-links">{imdb}{stream}</div>
-    </div>
-    <div class="movie-score">
-        <span class="score-val">{rec['score']:.2f}</span>
-        <span class="score-lbl">score</span>
-    </div>
-</div>"""
-        cards_html += "</div>"
-        st.markdown(cards_html, unsafe_allow_html=True)
+        render_movie_cards(recs, is_ranked=True)
         st.caption("Score = weighted avg rating from similar users. Higher = more loved.")
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1004,30 +1012,6 @@ elif page == "content":
             f'<div class="sec-hdr">🍿 Inspired by: {titles_str}</div>',
             unsafe_allow_html=True,
         )
-        cards_html = '<div class="movie-list">'
-        for i, rec in enumerate(sim_recs, 1):
-            g = "".join(f'<span class="genre-pill">{x.strip()}</span>' for x in rec["genres"].split("|"))
-            poster = get_poster_url(rec.get("tmdbId"))
-            poster_html = f'<img class="movie-poster" src="{poster}" />' if poster else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
-            
-            imdb = f'<a class="imdb-link" href="https://www.imdb.com/title/tt{rec.get("imdbId")}/" target="_blank">IMDb</a>' if rec.get("imdbId") else ""
-            providers = get_movie_details(rec.get("tmdbId"))
-            stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
-
-            cards_html += f"""
-<div class="movie-card">
-    <div class="movie-rank">{i:02d}</div>
-    {poster_html}
-    <div class="movie-info">
-        <div class="movie-title">{rec['title']}</div>
-        <div class="movie-genres">{g}</div>
-        <div class="ext-links">{imdb}{stream}</div>
-    </div>
-    <div class="movie-score">
-        <span class="score-val">{rec['score']:.2f}</span>
-        <span class="score-lbl">sim</span>
-    </div>
-</div>"""
-        cards_html += "</div>"
-        st.markdown(cards_html, unsafe_allow_html=True)
+        render_movie_cards(sim_recs, is_ranked=False)
         st.caption("Similarity = cosine similarity between the average TF-IDF vectors of your picks and the entire dataset.")
+
