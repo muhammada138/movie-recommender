@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import re
 import logging
+import streamlit as st
+from scipy.sparse import csr_matrix
 from sklearn.metrics.pairwise import cosine_similarity, linear_kernel
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -18,6 +20,7 @@ def format_title(title):
         return f"{article} {base}{rest}".strip()
     return title
 
+@st.cache_data(show_spinner=False)
 def load_data(ratings_path="data/ratings.csv", movies_path="data/movies.csv", links_path="data/links.csv", tags_path="data/tags.csv", keywords_path="data/tmdb_keywords.csv"):
     try:
         ratings = pd.read_csv(ratings_path)
@@ -66,22 +69,35 @@ class RecommenderEngine:
     def __init__(self):
         try:
             self.ratings, self.movies = load_data()
-            self.matrix = self._build_user_item_matrix(self.ratings)
-            self.similarity_df = self._build_similarity_matrix(self.matrix)
+            self.matrix, self.user_ids, self.movie_ids = self._build_user_item_matrix(self.ratings)
+            self.similarity_df = self._build_similarity_matrix(self.matrix, self.user_ids)
             self._init_tfidf()
         except Exception as e:
             logger.error(f"Failed to initialize recommender engine: {e}")
             self.ratings = pd.DataFrame()
             self.movies = pd.DataFrame(columns=['movieId', 'title', 'genres', 'tag', 'year', 'tmdbId', 'imdbId'])
-            self.matrix = pd.DataFrame()
+            self.matrix = None
+            self.user_ids = []
+            self.movie_ids = []
             self.similarity_df = pd.DataFrame()
 
     def _build_user_item_matrix(self, ratings):
-        return ratings.pivot_table(index="userId", columns="movieId", values="rating").fillna(0)
+        user_ids = sorted(ratings['userId'].unique())
+        movie_ids = sorted(ratings['movieId'].unique())
+        
+        user_map = {id: i for i, id in enumerate(user_ids)}
+        movie_map = {id: i for i, id in enumerate(movie_ids)}
+        
+        rows = ratings['userId'].map(user_map)
+        cols = ratings['movieId'].map(movie_map)
+        data = ratings['rating']
+        
+        matrix = csr_matrix((data, (rows, cols)), shape=(len(user_ids), len(movie_ids)))
+        return matrix, user_ids, movie_ids
 
-    def _build_similarity_matrix(self, matrix):
+    def _build_similarity_matrix(self, matrix, user_ids):
         sim = cosine_similarity(matrix)
-        return pd.DataFrame(sim, index=matrix.index, columns=matrix.index)
+        return pd.DataFrame(sim, index=user_ids, columns=user_ids)
 
     def _init_tfidf(self):
         self.movies['genres_str'] = self.movies['genres'].str.replace('|', ' ', regex=False).str.lower()
@@ -133,15 +149,31 @@ class RecommenderEngine:
         return self._format_results(sim_scores)
 
     def recommend_for_user(self, user_id, n=10, top_k_users=5):
-        if user_id not in self.matrix.index:
+        if user_id not in self.user_ids:
             raise ValueError(f"User {user_id} not found")
 
+        user_idx = self.user_ids.index(user_id)
         similar_users = self.similarity_df[user_id].sort_values(ascending=False)[1:top_k_users + 1]
-        similar_users_ratings = self.matrix.loc[similar_users.index]
-        weighted = similar_users_ratings.T.dot(similar_users) / (similar_users.sum() + 1e-9)
+        
+        # Get indices of similar users
+        similar_user_indices = [self.user_ids.index(uid) for uid in similar_users.index]
+        
+        # Get ratings of similar users from sparse matrix
+        similar_users_ratings = self.matrix[similar_user_indices]
+        
+        # Weighted average of ratings
+        # similar_users is a Series with user_id as index and similarity as value
+        weights = similar_users.values
+        weighted_ratings = similar_users_ratings.T.dot(weights) / (weights.sum() + 1e-9)
 
-        already_seen = self.matrix.loc[user_id][self.matrix.loc[user_id] > 0].index
-        recs = weighted.drop(already_seen, errors="ignore").sort_values(ascending=False).head(n)
+        # Get movies already seen by the user
+        user_row = self.matrix[user_idx].toarray().flatten()
+        already_seen_indices = np.where(user_row > 0)[0]
+        already_seen_movie_ids = [self.movie_ids[i] for i in already_seen_indices]
+        
+        # Create a Series for easy dropping and sorting
+        weighted_series = pd.Series(weighted_ratings, index=self.movie_ids)
+        recs = weighted_series.drop(already_seen_movie_ids, errors="ignore").sort_values(ascending=False).head(n)
         
         movie_id_to_idx = pd.Series(self.movies.index, index=self.movies['movieId'])
         indices_with_scores = []
