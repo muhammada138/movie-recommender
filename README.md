@@ -4,7 +4,7 @@
 
 Marquee is a modern, full-stack movie discovery platform that combines fundamental machine learning with rich external metadata. Built completely with Python, it transforms the raw MovieLens dataset into a visual, context-aware discovery experience.
 
-Live Demo: [Marquee on Streamlit](https://cf-movie-recommender.streamlit.app/)
+Live Demo: [Marquee on Streamlit](https://marqueemovie.streamlit.app/)
 
 ![Marquee Demo](assets/marquee_demo.png)
 
