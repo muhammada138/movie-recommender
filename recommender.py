@@ -164,7 +164,11 @@ class RecommenderEngine:
         # Weighted average of ratings
         # similar_users is a Series with user_id as index and similarity as value
         weights = similar_users.values
-        weighted_ratings = similar_users_ratings.T.dot(weights) / (weights.sum() + 1e-9)
+        mask = similar_users_ratings > 0
+        sum_weights = mask.T.dot(weights)
+        # Avoid division by zero for items no similar user has rated
+        sum_weights[sum_weights == 0] = 1e-9
+        weighted_ratings = similar_users_ratings.T.dot(weights) / sum_weights
 
         # Get movies already seen by the user
         user_row = self.matrix[user_idx].toarray().flatten()
