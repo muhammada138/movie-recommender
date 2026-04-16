@@ -1,6 +1,6 @@
 # Marquee 🎞️✨
 
-**The intelligent movie recommendation engine.**
+A powerful movie discovery platform that uses custom machine learning algorithms to help you find your next favorite film. It moves beyond basic search by analyzing deep metadata and user similarities, ensuring that every recommendation is relevant to your personal taste in genres, actors, and storytelling styles.
 
 Marquee is a modern, full-stack movie discovery platform that combines fundamental machine learning with rich external metadata. Built completely with Python, it transforms the raw MovieLens dataset into a visual, context-aware discovery experience.
 
