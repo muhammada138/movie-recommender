@@ -1,0 +1,4 @@
+## 2024-05-17 - Unescaped HTML Interpolation Vulnerability (XSS)
+**Vulnerability:** XSS vulnerability found in `app.py` when passing user input and database entries directly into HTML via string formatting without escaping it, and then rendering it using `st.markdown(..., unsafe_allow_html=True)`.
+**Learning:** In a Streamlit app using `unsafe_allow_html=True`, any unescaped dynamic content rendered inside markdown exposes the app to Cross-Site Scripting (XSS). Even content considered "trusted" (like movie titles from a dataset or TMDB) must be properly escaped if there's any chance it could be tampered with or contain special characters that break HTML formatting (e.g. `'`, `"`, `<`).
+**Prevention:** Always `import html` and use `html.escape()` when embedding user input or external data variables into HTML strings that will be rendered with `unsafe_allow_html=True`.

@@ -668,7 +668,7 @@ else:
 def _get_movie_card_html(movie, rank_label="▶", is_ranked=False, score=None, score_label="score"):
     """Internal helper for generating a single movie card's HTML."""
     genres_html = "".join(
-        f'<span class="genre-pill">{x.strip()}</span>'
+        f'<span class="genre-pill">{html.escape(x.strip())}</span>'
         for x in movie["genres"].split("|")
     )
     poster = get_poster_url(movie.get("tmdbId"))
@@ -700,7 +700,7 @@ def _get_movie_card_html(movie, rank_label="▶", is_ranked=False, score=None, s
     <div class="movie-rank">{rank_label}</div>
     {poster_html}
     <div class="movie-info">
-        <div class="movie-title">{movie['title']}</div>
+        <div class="movie-title">{html.escape(movie['title'])}</div>
         <div class="movie-genres">{genres_html}</div>
         <div class="ext-links">{imdb}{stream}</div>
     </div>
@@ -896,7 +896,7 @@ elif page == "collab":
 <div class="user-stats">
     <div class="u-stat">🎬 <strong>{rating_count}</strong> rated</div>
     <div class="u-stat">⭐ avg <strong>{avg_rating:.1f}</strong></div>
-    <div class="u-stat">🏆 <strong>{fave_short}</strong></div>
+    <div class="u-stat">🏆 <strong>{html.escape(fave_short)}</strong></div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -970,7 +970,7 @@ elif page == "content":
                                 escaped_title = html.escape(match.title)
                                 st.markdown(f'<img src="{post}" alt="{escaped_title} poster" style="width:30px; border-radius:4px;">', unsafe_allow_html=True)
                         with rc2:
-                            st.markdown(f"<span style='font-size:.85rem; color:#eef0ff;'>{match.title}</span>", unsafe_allow_html=True)
+                            st.markdown(f"<span style='font-size:.85rem; color:#eef0ff;'>{html.escape(match.title)}</span>", unsafe_allow_html=True)
                         with rc3:
                             if st.button("Add", key=f"add_{match.movieId}"):
                                 if match.title not in st.session_state.selected_movies:
@@ -1029,7 +1029,7 @@ elif page == "content":
 
         titles_str = ", ".join(selected_movie_titles) if len(selected_movie_titles) <= 3 else f"{len(selected_movie_titles)} movies"
         st.markdown(
-            f'<div class="sec-hdr">🍿 Inspired by: {titles_str}</div>',
+            f'<div class="sec-hdr">🍿 Inspired by: {html.escape(titles_str)}</div>',
             unsafe_allow_html=True,
         )
         render_movie_cards(sim_recs, is_ranked=False)
