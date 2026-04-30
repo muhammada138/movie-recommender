@@ -667,6 +667,9 @@ else:
 
 def _get_movie_card_html(movie, rank_label="▶", is_ranked=False, score=None, score_label="score"):
     """Internal helper for generating a single movie card's HTML."""
+    safe_title = html.escape(str(movie['title']))
+    safe_rank = html.escape(str(rank_label))
+
     genres_html = "".join(
         f'<span class="genre-pill">{html.escape(x.strip())}</span>'
         for x in movie["genres"].split("|")
@@ -674,18 +677,18 @@ def _get_movie_card_html(movie, rank_label="▶", is_ranked=False, score=None, s
     poster = get_poster_url(movie.get("tmdbId"))
     escaped_title = html.escape(movie["title"])
     poster_html = (
-        f'<img class="movie-poster" src="{poster}" alt="{escaped_title} poster" />'
+        f'<img class="movie-poster" src="{poster}" alt="{safe_title} poster" />'
         if poster
         else f'<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;" aria-label="{escaped_title} poster not available">No Image</div>'
     )
 
     imdb = (
-        f'<a class="imdb-link" href="https://www.imdb.com/title/tt{movie.get("imdbId")}/" target="_blank">IMDb</a>'
+        f'<a class="imdb-link" href="https://www.imdb.com/title/tt{html.escape(str(movie.get("imdbId")))}/" target="_blank">IMDb</a>'
         if movie.get("imdbId")
         else ""
     )
     providers = get_movie_details(movie.get("tmdbId"))
-    stream = "".join([f'<span class="stream-badge">{p}</span>' for p in providers])
+    stream = "".join([f'<span class="stream-badge">{html.escape(p)}</span>' for p in providers])
 
     score_html = ""
     if score is not None:
@@ -697,10 +700,10 @@ def _get_movie_card_html(movie, rank_label="▶", is_ranked=False, score=None, s
 
     return f"""
 <div class="movie-card">
-    <div class="movie-rank">{rank_label}</div>
+    <div class="movie-rank">{safe_rank}</div>
     {poster_html}
     <div class="movie-info">
-        <div class="movie-title">{html.escape(movie['title'])}</div>
+        <div class="movie-title">{safe_title}</div>
         <div class="movie-genres">{genres_html}</div>
         <div class="ext-links">{imdb}{stream}</div>
     </div>
@@ -890,13 +893,14 @@ elif page == "collab":
     avg_rating = user_ratings_df["rating"].mean()
     fave = user_ratings_df.iloc[0]["title"]
     fave_short = fave if len(fave) <= 26 else fave[:23] + "…"
+    safe_fave_short = html.escape(fave_short)
 
     st.markdown(
         f"""
 <div class="user-stats">
     <div class="u-stat">🎬 <strong>{rating_count}</strong> rated</div>
     <div class="u-stat">⭐ avg <strong>{avg_rating:.1f}</strong></div>
-    <div class="u-stat">🏆 <strong>{html.escape(fave_short)}</strong></div>
+    <div class="u-stat">🏆 <strong>{safe_fave_short}</strong></div>
 </div>
 """,
         unsafe_allow_html=True,
@@ -963,14 +967,14 @@ elif page == "content":
                 if not matches.empty:
                     st.markdown("<div style='background:rgba(255,255,255,.03); padding:1rem; border-radius:10px; margin-bottom:1rem;'>", unsafe_allow_html=True)
                     for match in matches.head(4).itertuples():
+                        safe_match_title = html.escape(str(match.title))
                         rc1, rc2, rc3 = st.columns([.5, 4, 1.5])
                         with rc1:
                             post = get_poster_url(getattr(match, "tmdbId", None))
                             if post:
-                                escaped_title = html.escape(match.title)
-                                st.markdown(f'<img src="{post}" alt="{escaped_title} poster" style="width:30px; border-radius:4px;">', unsafe_allow_html=True)
+                                st.markdown(f'<img src="{post}" alt="{safe_match_title} poster" style="width:30px; border-radius:4px;">', unsafe_allow_html=True)
                         with rc2:
-                            st.markdown(f"<span style='font-size:.85rem; color:#eef0ff;'>{html.escape(match.title)}</span>", unsafe_allow_html=True)
+                            st.markdown(f"<span style='font-size:.85rem; color:#eef0ff;'>{safe_match_title}</span>", unsafe_allow_html=True)
                         with rc3:
                             if st.button("Add", key=f"add_{match.movieId}"):
                                 if match.title not in st.session_state.selected_movies:
@@ -1028,8 +1032,9 @@ elif page == "content":
                 st.stop()
 
         titles_str = ", ".join(selected_movie_titles) if len(selected_movie_titles) <= 3 else f"{len(selected_movie_titles)} movies"
+        safe_titles_str = html.escape(titles_str)
         st.markdown(
-            f'<div class="sec-hdr">🍿 Inspired by: {html.escape(titles_str)}</div>',
+            f'<div class="sec-hdr">🍿 Inspired by: {safe_titles_str}</div>',
             unsafe_allow_html=True,
         )
         render_movie_cards(sim_recs, is_ranked=False)
