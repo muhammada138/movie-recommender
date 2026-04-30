@@ -121,7 +121,7 @@ class RecommenderEngine:
             })
         return result
 
-    def recommend_similar(self, movie_ids, n=10):
+    def recommend_similar(self, movie_ids, n=10, exclude_ids=None):
         if not isinstance(movie_ids, list):
             movie_ids = [movie_ids]
             
@@ -144,12 +144,17 @@ class RecommenderEngine:
         year_penalty = np.exp(-(year_diff**2) / (2 * (15**2)))
         avg_sim = avg_sim * year_penalty
         
+        # Apply exclusions
+        if exclude_ids:
+            exclude_indices = self.movies.index[self.movies["movieId"].isin(exclude_ids)].tolist()
+            avg_sim[exclude_indices] = -np.inf
+
         sim_scores = sorted(list(enumerate(avg_sim)), key=lambda x: x[1], reverse=True)
-        sim_scores = [x for x in sim_scores if x[0] not in indices][:n]
+        sim_scores = [x for x in sim_scores if x[0] not in indices and x[1] > -np.inf][:n]
         
         return self._format_results(sim_scores)
 
-    def recommend_for_user(self, user_id, n=10, top_k_users=5):
+    def recommend_for_user(self, user_id, n=10, top_k_users=5, exclude_ids=None):
         if user_id not in self.user_ids:
             raise ValueError(f"User {user_id} not found")
 
@@ -180,6 +185,13 @@ class RecommenderEngine:
         # We make a copy to avoid mutating the original weighted_ratings array
         scores_array = weighted_ratings.copy()
         scores_array[already_seen_indices] = -np.inf
+
+        # Apply additional exclusions (e.g. from session state)
+        if exclude_ids:
+            # Map movieIds back to matrix column indices
+            # self.movie_ids is a sorted list of movieIds corresponding to columns
+            exclude_col_indices = [i for i, mid in enumerate(self.movie_ids) if mid in exclude_ids]
+            scores_array[exclude_col_indices] = -np.inf
 
         # Get top n indices sorted by score descending
         top_indices = np.argsort(scores_array)[::-1][:n]
@@ -216,11 +228,11 @@ def __getattr__(name):
         return _get_engine().movies
     raise AttributeError(f"module {__name__} has no attribute {name}")
 
-def recommend_for_user(user_id, n=10, top_k_users=5):
-    return _get_engine().recommend_for_user(user_id, n, top_k_users)
+def recommend_for_user(user_id, n=10, top_k_users=5, exclude_ids=None):
+    return _get_engine().recommend_for_user(user_id, n, top_k_users, exclude_ids)
 
-def recommend_similar_movies(movie_ids, n=10):
-    return _get_engine().recommend_similar(movie_ids, n)
+def recommend_similar_movies(movie_ids, n=10, exclude_ids=None):
+    return _get_engine().recommend_similar(movie_ids, n, exclude_ids)
 
 def get_user_rating_count(user_id, ratings=None):
     return _get_engine().get_user_rating_count(user_id)

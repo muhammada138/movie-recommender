@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
 
+@st.cache_data(show_spinner=False, ttl=86400)
 def _fetch_tmdb_data(endpoint, tmdb_id):
     """Internal helper for TMDB API requests."""
     if not TMDB_API_KEY or pd.isna(tmdb_id) or not tmdb_id:

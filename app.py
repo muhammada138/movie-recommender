@@ -11,12 +11,12 @@ from recommender import (
 from utils import get_poster_url, get_movie_details
 
 @st.cache_data(show_spinner=False)
-def get_user_recs(user_id, n, top_k):
-    return recommend_for_user(user_id, n=n, top_k_users=top_k)
+def get_user_recs(user_id, n, top_k, exclude_ids=None):
+    return recommend_for_user(user_id, n=n, top_k_users=top_k, exclude_ids=exclude_ids)
 
 @st.cache_data(show_spinner=False)
-def get_content_recs(movie_ids, n):
-    return recommend_similar_movies(movie_ids, n=n)
+def get_content_recs(movie_ids, n, exclude_ids=None):
+    return recommend_similar_movies(movie_ids, n=n, exclude_ids=exclude_ids)
 
 st.set_page_config(
     page_title="Marquee",
@@ -27,6 +27,12 @@ st.set_page_config(
 
 if "page" not in st.session_state:
     st.session_state.page = "home"
+if "watchlist" not in st.session_state:
+    st.session_state.watchlist = set()
+if "seen" not in st.session_state:
+    st.session_state.seen = set()
+if "skip_seen" not in st.session_state:
+    st.session_state.skip_seen = True
 
 
 def go(page: str):
@@ -713,15 +719,39 @@ def _get_movie_card_html(movie, rank_label="▶", is_ranked=False, score=None, s
 
 def render_movie_cards(recommendations, is_ranked=True):
     """Helper to render movie cards consistently."""
-    cards_html = '<div class="movie-list">'
     for i, rec in enumerate(recommendations, 1):
         rank_label = f"{i:02d}" if is_ranked else "▶"
         score_label = "score" if is_ranked else "sim"
-        cards_html += _get_movie_card_html(
-            rec, rank_label, is_ranked, rec.get("score"), score_label
-        )
-    cards_html += "</div>"
-    st.markdown(cards_html, unsafe_allow_html=True)
+        
+        m_id = rec["movieId"]
+        
+        # We use columns to put buttons next to the card
+        c1, c2 = st.columns([5, 1])
+        with c1:
+            st.markdown(_get_movie_card_html(
+                rec, rank_label, is_ranked, rec.get("score"), score_label
+            ), unsafe_allow_html=True)
+            
+        with c2:
+            st.write("") # Spacer
+            st.write("") # Spacer
+            if m_id in st.session_state.watchlist:
+                if st.button("Saved", key=f"wl_{m_id}_{i}", use_container_width=True):
+                    st.session_state.watchlist.remove(m_id)
+                    st.rerun()
+            else:
+                if st.button("＋ WL", key=f"wl_{m_id}_{i}", use_container_width=True, help="Add to Watchlist"):
+                    st.session_state.watchlist.add(m_id)
+                    st.rerun()
+            
+            if m_id in st.session_state.seen:
+                if st.button("Unseen", key=f"sn_{m_id}_{i}", use_container_width=True):
+                    st.session_state.seen.remove(m_id)
+                    st.rerun()
+            else:
+                if st.button("✓ Seen", key=f"sn_{m_id}_{i}", use_container_width=True, help="Mark as Seen"):
+                    st.session_state.seen.add(m_id)
+                    st.rerun()
 
 # ── NAVIGATION ──────────────────────────────────────────────────────────────
 nav_cols = st.columns([3.5, 1.4, 1.4])
@@ -924,7 +954,8 @@ elif page == "collab":
     if st.button("🚀 Get Recommendations", key="collab_btn"):
         with st.spinner("Crunching similarities…"):
             try:
-                recs = get_user_recs(user_id, n=n_recs, top_k=top_k)
+                exclude = tuple(st.session_state.seen) if st.session_state.skip_seen else None
+                recs = get_user_recs(user_id, n=n_recs, top_k=top_k, exclude_ids=exclude)
             except ValueError as e:
                 st.error(str(e))
                 st.stop()
@@ -1026,7 +1057,8 @@ elif page == "content":
         with st.spinner("Matching and blending genre vectors…"):
             try:
                 selected_ids = movies[movies["title"].isin(selected_movie_titles)]["movieId"].tolist()
-                sim_recs = get_content_recs(selected_ids, n=n_recs)
+                exclude = tuple(st.session_state.seen) if st.session_state.skip_seen else None
+                sim_recs = get_content_recs(selected_ids, n=n_recs, exclude_ids=exclude)
             except Exception as e:
                 st.error(str(e))
                 st.stop()
