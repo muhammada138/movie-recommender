@@ -1,0 +1,3 @@
+## 2024-06-25 - Accessibility in Streamlit apps
+**Learning:** When using Streamlit to render custom HTML via `st.markdown(..., unsafe_allow_html=True)`, it bypasses standard accessibility checks. Manually constructed `<img>` tags and placeholder `<div>` tags require manual implementation of accessibility features like `alt` and `aria-label` attributes. It is also important to escape text values such as titles with `html.escape` to ensure proper HTML formatting, particularly if the values contain quotes.
+**Action:** Always include accessibility attributes and escape dynamically inserted string values when writing custom HTML for Streamlit components.

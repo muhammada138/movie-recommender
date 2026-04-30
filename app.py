@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import html
 from recommender import (
     recommend_for_user,
     ratings,
@@ -671,10 +672,11 @@ def _get_movie_card_html(movie, rank_label="▶", is_ranked=False, score=None, s
         for x in movie["genres"].split("|")
     )
     poster = get_poster_url(movie.get("tmdbId"))
+    escaped_title = html.escape(movie["title"])
     poster_html = (
-        f'<img class="movie-poster" src="{poster}" />'
+        f'<img class="movie-poster" src="{poster}" alt="{escaped_title} poster" />'
         if poster
-        else '<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;">No Image</div>'
+        else f'<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;" aria-label="{escaped_title} poster not available">No Image</div>'
     )
 
     imdb = (
@@ -965,7 +967,8 @@ elif page == "content":
                         with rc1:
                             post = get_poster_url(getattr(match, "tmdbId", None))
                             if post:
-                                st.markdown(f'<img src="{post}" style="width:30px; border-radius:4px;">', unsafe_allow_html=True)
+                                escaped_title = html.escape(match.title)
+                                st.markdown(f'<img src="{post}" alt="{escaped_title} poster" style="width:30px; border-radius:4px;">', unsafe_allow_html=True)
                         with rc2:
                             st.markdown(f"<span style='font-size:.85rem; color:#eef0ff;'>{match.title}</span>", unsafe_allow_html=True)
                         with rc3:
