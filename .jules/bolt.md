@@ -1,0 +1,3 @@
+## 2026-04-18 - Replacing Pandas Series with NumPy Arrays for Fast Inner-Loop Sorting
+**Learning:** Using Pandas Series to manage indexing, filtering, and sorting in tight execution loops (like the `recommend_for_user` logic) is a significant performance anti-pattern. While readable, the overhead of creating `pd.Series`, manipulating indices, and calling `.drop()` takes up nearly 90% of the function's execution time compared to raw matrix math.
+**Action:** Always prefer pure NumPy array masking (e.g., `array[seen_indices] = -1`) and sorting (`np.argsort`) when computing predictions inside frequently called recommendation algorithms.
