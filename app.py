@@ -651,7 +651,7 @@ if page in _active:
     st.markdown(
         f"""
 <style>
-[data-marquee-nav="1"] .stColumn:nth-child({_col}) .stButton > button {{
+[data-marquee-nav="1"] .stColumn:nth-child({html.escape(str(_col))}) .stButton > button {{
     color: #818cf8 !important;
     border-color: rgba(99,102,241,.28) !important;
     background: rgba(99,102,241,.06) !important;
