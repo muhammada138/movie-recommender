@@ -149,9 +149,19 @@ class RecommenderEngine:
             exclude_indices = self.movies.index[self.movies["movieId"].isin(exclude_ids)].tolist()
             avg_sim[exclude_indices] = -np.inf
 
-        sim_scores = sorted(list(enumerate(avg_sim)), key=lambda x: x[1], reverse=True)
-        sim_scores = [x for x in sim_scores if x[0] not in indices and x[1] > -np.inf][:n]
-        
+        # ⚡ Bolt Optimization: Replace Python sorted(list(enumerate())) with pure NumPy argsort.
+        # This significantly speeds up recommend_similar for large datasets.
+        scores_array = avg_sim.copy()
+        scores_array[indices] = -np.inf # Exclude target movies
+
+        top_indices = np.argsort(-scores_array, kind='mergesort')[:n]
+        sim_scores = []
+        for idx in top_indices:
+            score = scores_array[idx]
+            if score == -np.inf:
+                break
+            sim_scores.append((idx, score))
+
         return self._format_results(sim_scores)
 
     def recommend_for_user(self, user_id, n=10, top_k_users=5, exclude_ids=None):

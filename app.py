@@ -683,7 +683,7 @@ def _get_movie_card_html(movie, rank_label="▶", is_ranked=False, score=None, s
     poster = get_poster_url(movie.get("tmdbId"))
     escaped_title = html.escape(movie["title"])
     poster_html = (
-        f'<img class="movie-poster" src="{poster}" alt="{safe_title} poster" />'
+        f'<img class="movie-poster" src="{html.escape(str(poster))}" alt="{safe_title} poster" />'
         if poster
         else f'<div class="movie-poster" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 0.5rem; text-align: center; color: #666;" aria-label="{escaped_title} poster not available">No Image</div>'
     )
@@ -698,10 +698,11 @@ def _get_movie_card_html(movie, rank_label="▶", is_ranked=False, score=None, s
 
     score_html = ""
     if score is not None:
+        safe_score_lbl = html.escape(str(score_label))
         score_html = f"""
     <div class="movie-score">
-        <span class="score-val">{score:.2f}</span>
-        <span class="score-lbl">{score_label}</span>
+        <span class="score-val">{html.escape(str(f"{score:.2f}"))}</span>
+        <span class="score-lbl">{safe_score_lbl}</span>
     </div>"""
 
     return f"""
@@ -925,11 +926,13 @@ elif page == "collab":
     fave_short = fave if len(fave) <= 26 else fave[:23] + "…"
     safe_fave_short = html.escape(fave_short)
 
+    safe_rating_count = html.escape(str(rating_count))
+    safe_avg_rating = html.escape(str(f"{avg_rating:.1f}"))
     st.markdown(
         f"""
 <div class="user-stats">
-    <div class="u-stat">🎬 <strong>{rating_count}</strong> rated</div>
-    <div class="u-stat">⭐ avg <strong>{avg_rating:.1f}</strong></div>
+    <div class="u-stat">🎬 <strong>{safe_rating_count}</strong> rated</div>
+    <div class="u-stat">⭐ avg <strong>{safe_avg_rating}</strong></div>
     <div class="u-stat">🏆 <strong>{safe_fave_short}</strong></div>
 </div>
 """,
@@ -937,11 +940,12 @@ elif page == "collab":
     )
 
     if rating_count < 15:
+        safe_user_id = html.escape(str(user_id))
         st.markdown(
             f"""
 <div class="cold-start">
     <span style="flex-shrink:0;">⚠️</span>
-    <span><strong>Cold-start:</strong> User {user_id} only has {rating_count} ratings —
+    <span><strong>Cold-start:</strong> User {safe_user_id} only has {safe_rating_count} ratings —
     recommendations may be noisy.</span>
 </div>
 """,
@@ -960,8 +964,10 @@ elif page == "collab":
                 st.error(str(e))
                 st.stop()
 
+        safe_user_id = html.escape(str(user_id))
+        safe_len_recs = html.escape(str(len(recs)))
         st.markdown(
-            f'<div class="sec-hdr">🍿 Top {len(recs)} picks for User {user_id}</div>',
+            f'<div class="sec-hdr">🍿 Top {safe_len_recs} picks for User {safe_user_id}</div>',
             unsafe_allow_html=True,
         )
         render_movie_cards(recs, is_ranked=True)
@@ -1003,7 +1009,7 @@ elif page == "content":
                         with rc1:
                             post = get_poster_url(getattr(match, "tmdbId", None))
                             if post:
-                                st.markdown(f'<img src="{post}" alt="{safe_match_title} poster" style="width:30px; border-radius:4px;">', unsafe_allow_html=True)
+                                st.markdown(f'<img src="{html.escape(str(post))}" alt="{safe_match_title} poster" style="width:30px; border-radius:4px;">', unsafe_allow_html=True)
                         with rc2:
                             st.markdown(f"<span style='font-size:.85rem; color:#eef0ff;'>{safe_match_title}</span>", unsafe_allow_html=True)
                         with rc3:
