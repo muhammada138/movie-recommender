@@ -737,7 +737,7 @@ def render_movie_cards(recommendations, is_ranked=True):
             st.write("") # Spacer
             st.write("") # Spacer
             if m_id in st.session_state.watchlist:
-                if st.button("Saved", key=f"wl_{m_id}_{i}", use_container_width=True):
+                if st.button("Saved", key=f"wl_{m_id}_{i}", use_container_width=True, help="Remove from Watchlist"):
                     st.session_state.watchlist.remove(m_id)
                     st.rerun()
             else:
@@ -746,7 +746,7 @@ def render_movie_cards(recommendations, is_ranked=True):
                     st.rerun()
             
             if m_id in st.session_state.seen:
-                if st.button("Unseen", key=f"sn_{m_id}_{i}", use_container_width=True):
+                if st.button("Unseen", key=f"sn_{m_id}_{i}", use_container_width=True, help="Mark as Unseen"):
                     st.session_state.seen.remove(m_id)
                     st.rerun()
             else:
